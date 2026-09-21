@@ -1,10 +1,25 @@
-.venv/
+# Secrets and local config - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+.claude/settings.local.json
+
+# Python
 __pycache__/
 *.py[cod]
-.env
-*.db
+.venv/
+venv/
+
+# Django
 *.sqlite3
-.pytest_cache/
-.ruff_cache/
+/media/
+/staticfiles/
+
+# Editors / OS
 .idea/
 .vscode/
+.DS_Store
+Thumbs.db
