@@ -27,12 +27,6 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+m#(^f#l@5=q!ew5gi+tn1m8l!oz0rw18)%()gdxp@77ks$3%4'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
 ALLOWED_HOSTS = []
 
 
