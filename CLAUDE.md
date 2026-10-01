@@ -19,4 +19,4 @@ Lending system for hospital equipment. Monorepo, one product.
 
 See `docs/adr/README.md`. Accepted so far: responsive web app, Django backend, Django templates +
 HTMX frontend (must stay portable to React/Next), Django apps with enforced code boundaries
-(Import Linter). Pending: database.
+(Import Linter), PostgreSQL (managed).
