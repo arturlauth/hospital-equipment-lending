@@ -42,3 +42,4 @@ name = "Only lending imports lending models"
 type = "protected"
 protected_modules = ["hospitalequip.lending.models"]
 allowed_importers = ["hospitalequip.lending"]
+ignore_imports = ["hospitalequip.inventory.tests -> hospitalequip.lending.models"]

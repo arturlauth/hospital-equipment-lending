@@ -29,12 +29,17 @@ Lending system for hospital equipment. Monorepo, one product.
 - Claude creates the branch, makes the changes and stops for Artur to review the diff. Only after he
   runs `/ship` does Claude run the gates (ruff + pytest), commit, push and open the PR
   (`.claude/skills/ship/`). Artur merges (merge commit); Claude never merges or pushes `main`.
-  Enforced in `.claude/settings.json`.
+  Enforced in `.claude/settings.json`. GitHub ruleset `protect-main` also requires a PR and the
+  `checks` CI job.
+- **CLAUDE.md-only edits never get their own branch or PR.** Leave them uncommitted and carry them
+  onto the next feature branch, where they ship with that PR.
+- **"Merged" alone means clean up, without asking:** `git switch main`, `git pull`, then delete the
+  merged branch locally (`git branch -d`) and on the remote (`git push origin --delete`).
 
 ## Commands
 
 Managed with `uv`. Settings read `.env` (python-dotenv); `DJANGO_SECRET_KEY` and `POSTGRES_DB/USER/PASSWORD/HOST/PORT`
-are required — `.env.example` lists only the first two.
+are required; `.env.example` lists every variable (`config/test_env_example.py` fails if one is missing).
 
 - DB: `docker compose up -d db` (Postgres 18 on 5432)
 - Migrate / run: `uv run python manage.py migrate`, `uv run python manage.py runserver`
@@ -46,8 +51,10 @@ are required — `.env.example` lists only the first two.
 ## Architecture
 
 Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse, Equipment) and
-`lending` (Person, Loan). Dependency runs one way: `lending` → `inventory` (Loan FKs Equipment), never
-back, enforced by Import Linter (`uv run lint-imports`; contracts in `pyproject.toml`). Lending rules
+`lending` (Person, Loan). An app's models are imported only by that app, enforced by Import Linter
+(`uv run lint-imports`; contracts in `pyproject.toml`); other apps go through its `services.py`.
+`lending` FKs `inventory`; the catalog view in `inventory` reads `lending.services` (known debt,
+`docs/known-debts.md`). Lending rules
 (e.g. one open loan per equipment, date ordering) are DB constraints in `Loan.Meta.constraints`.
 
 ## Decisions
@@ -55,3 +62,18 @@ back, enforced by Import Linter (`uv run lint-imports`; contracts in `pyproject.
 See `docs/adr/README.md`. Accepted so far: responsive web app, Django backend, Django templates +
 HTMX frontend (must stay portable to React/Next), Django apps with enforced code boundaries
 (Import Linter), PostgreSQL (managed).
+
+## Lessons Learned — Do Not Retry
+
+Running log of mistakes, dead-ends, and environment quirks discovered while working on this
+repo. **Purpose:** a future session should read this and avoid burning time/tokens
+re-discovering the same thing. Append a row whenever a real mistake or non-obvious constraint
+is hit — newest at the top.
+
+**Scope:** repo- and stack-specific traps only. Machine-level traps (PATH, shells, git
+credentials, a missing CLI) belong in the global `CLAUDE.md`, not here. Anything already
+stated elsewhere in this file, in the code, or in git history does not get a row.
+
+| Date | Trap / mistake | Correct approach |
+|---|---|---|
+| 2026-10-03 | `.env.example` drifted from `settings.py` (listed 2 of 7 variables) and the gap was logged as a debt instead of fixed; a fresh clone fails at startup with `KeyError` | Add the variable to `.env.example` in the same change that reads it; `config/test_env_example.py` now enforces this |
