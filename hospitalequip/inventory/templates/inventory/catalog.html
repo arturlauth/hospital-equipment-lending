@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Equipamentos disponíveis</title>
+</head>
+<body>
+  <h1>Equipamentos disponíveis</h1>
+  {% regroup equipment_list by category as groups %}
+  {% for group in groups %}
+    <h2>{{ group.grouper }}</h2>
+    <ul>
+      {% for item in group.list %}
+        <li>{{ item.name }}{% if item.description %} — {{ item.description }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% empty %}
+    <p>Nenhum equipamento disponível no momento.</p>
+  {% endfor %}
+</body>
+</html>
