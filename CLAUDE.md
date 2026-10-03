@@ -26,8 +26,10 @@ Lending system for hospital equipment. Monorepo, one product.
 ## Git flow
 
 - One branch per change off `main`: `feat/<slug>`, `fix/<slug>` or `setup/<slug>`. Never edit on `main`.
-- Artur commits, pushes, opens the PR and merges (merge commit) himself. Claude creates the branch,
-  makes the changes and stops — no `git commit`, `push` or `merge`. Enforced in `.claude/settings.json`.
+- Claude creates the branch, makes the changes and stops for Artur to review the diff. Only after he
+  runs `/ship` does Claude run the gates (ruff + pytest), commit, push and open the PR
+  (`.claude/skills/ship/`). Artur merges (merge commit); Claude never merges or pushes `main`.
+  Enforced in `.claude/settings.json`.
 
 ## Commands
 
@@ -39,6 +41,7 @@ are required — `.env.example` lists only the first two.
 - Demo data: `uv run python manage.py loaddata demo_inventory demo_lending` (inventory first)
 - Tests: `uv run pytest`; one test: `uv run pytest hospitalequip/lending/tests.py::test_name`
   (needs the DB running — pytest-django creates a test database)
+- Lint / format: `uv run ruff check --fix`, `uv run ruff format` (ADR 0007; migrations excluded)
 
 ## Architecture
 

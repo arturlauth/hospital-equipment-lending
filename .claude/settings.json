@@ -6,13 +6,17 @@
       "Bash(uv run python manage.py *)",
       "PowerShell(uv run python manage.py *)",
       "Bash(git switch -c *)",
-      "PowerShell(git switch -c *)"
+      "PowerShell(git switch -c *)",
+      "PowerShell(uv run ruff *)",
+      "PowerShell(git add *)",
+      "PowerShell(git commit *)",
+      "PowerShell(git push -u origin *)",
+      "PowerShell(& \"C:\\Program Files\\GitHub CLI\\gh.exe\" pr create *)"
     ],
     "deny": [
-      "Bash(git commit *)",
-      "PowerShell(git commit *)",
-      "Bash(git push *)",
-      "PowerShell(git push *)",
+      "Bash(git push * main)",
+      "PowerShell(git push * main)",
+      "PowerShell(git push origin main *)",
       "Bash(git merge *)",
       "PowerShell(git merge *)"
     ]
