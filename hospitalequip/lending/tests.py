@@ -11,7 +11,9 @@ from hospitalequip.lending.models import Loan, Person
 def open_loan():
     # The test builds the exact rows it needs, so nothing outside this file can break it.
     warehouse = Warehouse.objects.create(name="Depósito teste")
-    equipment = Equipment.objects.create(name="Cadeira de rodas", category="cadeira", warehouse=warehouse)
+    equipment = Equipment.objects.create(
+        name="Cadeira de rodas", category="cadeira", warehouse=warehouse
+    )
     person = Person.objects.create(
         name="Pessoa Teste", cpf="00000000099", birth_date=date(1950, 1, 1), phone="0"
     )
