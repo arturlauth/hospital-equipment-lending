@@ -12,6 +12,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.import_linter_cache/
 
 # Django
 *.sqlite3
