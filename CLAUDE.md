@@ -47,7 +47,7 @@ are required — `.env.example` lists only the first two.
 
 Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse, Equipment) and
 `lending` (Person, Loan). Dependency runs one way: `lending` → `inventory` (Loan FKs Equipment), never
-back. ADR 0004 calls for Import Linter to enforce this, but it is not configured yet. Lending rules
+back, enforced by Import Linter (`uv run lint-imports`; contracts in `pyproject.toml`). Lending rules
 (e.g. one open loan per equipment, date ordering) are DB constraints in `Loan.Meta.constraints`.
 
 ## Decisions
