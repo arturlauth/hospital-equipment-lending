@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Entrar{% endblock %}
+
+{% block content %}
+  <div class="mx-auto mt-8 max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+    <h1 class="mb-4 text-xl font-semibold">Acesso da equipe</h1>
+    {% if form.errors %}
+      <p class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">Usuário ou senha incorretos.</p>
+    {% endif %}
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label class="block text-sm font-medium">
+        Usuário
+        <input type="text" name="username" autocomplete="username" required autofocus
+               value="{{ form.username.value|default:'' }}"
+               class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-sky-600 focus:outline-none">
+      </label>
+      <label class="block text-sm font-medium">
+        Senha
+        <input type="password" name="password" autocomplete="current-password" required
+               class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-sky-600 focus:outline-none">
+      </label>
+      <button type="submit" class="w-full rounded-lg bg-sky-700 py-2.5 font-medium text-white hover:bg-sky-800">Entrar</button>
+    </form>
+  </div>
+{% endblock %}

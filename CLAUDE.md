@@ -47,11 +47,14 @@ are required; `.env.example` lists every variable (`config/test_env_example.py` 
 - Tests: `uv run pytest`; one test: `uv run pytest hospitalequip/lending/tests.py::test_name`
   (needs the DB running — pytest-django creates a test database)
 - Lint / format: `uv run ruff check --fix`, `uv run ruff format` (ADR 0007; migrations excluded)
+- CSS: `uv run tailwindcss -i assets/tailwind.css -o static/css/app.css --watch` (ADR 0008;
+  output not versioned, pages render unstyled until built)
 
 ## Architecture
 
 Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse, Equipment) and
-`lending` (Person, Loan). An app's models are imported only by that app, enforced by Import Linter
+`lending` (Person, Loan), `staff` (login, roles as auth Groups created by migration). Shared
+layout in `templates/base.html`. An app's models are imported only by that app, enforced by Import Linter
 (`uv run lint-imports`; contracts in `pyproject.toml`); other apps go through its `services.py`.
 `lending` FKs `inventory`; the catalog view in `inventory` reads `lending.services` (known debt,
 `docs/known-debts.md`). Lending rules

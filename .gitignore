@@ -24,3 +24,9 @@ venv/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Tailwind build output (ADR 0008)
+/static/css/app.css
+
+# Temporary working plan
+/PLAN.md

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "hospitalequip.inventory",
     "hospitalequip.lending",
+    "hospitalequip.staff",
 ]
 
 MIDDLEWARE = [
@@ -58,7 +59,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -123,6 +124,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = "static/"
+# static/css/app.css is built by Tailwind from assets/tailwind.css (ADR 0008) and not versioned.
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
+# Authentication
+
+LOGIN_URL = "staff:login"
+LOGIN_REDIRECT_URL = "staff:home"
+LOGOUT_REDIRECT_URL = "inventory:catalog"
 
 
 # Email

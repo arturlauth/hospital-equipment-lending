@@ -9,4 +9,5 @@
 | [0005](0005-database-postgresql.md) | Database: PostgreSQL | Accepted |
 | [0006](0006-testing-pytest.md) | Testing: pytest + pytest-django | Accepted |
 | [0007](0007-lint-format-ruff.md) | Lint and format: Ruff | Accepted |
+| [0008](0008-styling-tailwind.md) | Styling: Tailwind CSS (standalone CLI) | Accepted |
 | - | Repo layout: monorepo | Accepted (no ADR file) |

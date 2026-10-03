@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block title %}Equipe{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-semibold">Olá, {{ user.get_short_name|default:user.username }}</h1>
+  <p class="mt-2 text-slate-600">As telas de empréstimo e devolução chegam nas próximas entregas.</p>
+{% endblock %}
