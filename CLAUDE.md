@@ -56,8 +56,8 @@ Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse
 `lending` (Person, Loan), `staff` (login, roles as auth Groups created by migration). Shared
 layout in `templates/base.html`. An app's models are imported only by that app, enforced by Import Linter
 (`uv run lint-imports`; contracts in `pyproject.toml`); other apps go through its `services.py`.
-`lending` FKs `inventory`; the catalog view in `inventory` reads `lending.services` (known debt,
-`docs/known-debts.md`). Lending rules
+`lending` FKs `inventory`; `inventory` reads loan state through that reverse relation (ORM read,
+allowed by ADR 0004). Debts: `docs/known-debts.md`. Lending rules
 (e.g. one open loan per equipment, date ordering) are DB constraints in `Loan.Meta.constraints`.
 
 ## Decisions

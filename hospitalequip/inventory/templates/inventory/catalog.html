@@ -1,23 +1,31 @@
 {% extends "base.html" %}
 
-{% block title %}Equipamentos disponíveis{% endblock %}
+{% block title %}Equipamentos{% endblock %}
 
 {% block content %}
-  <h1 class="mb-6 text-2xl font-semibold">Equipamentos disponíveis</h1>
+  <h1 class="mb-1 text-2xl font-semibold">Equipamentos</h1>
+  <p class="mb-6 text-slate-600">Itens do acervo para empréstimo gratuito.</p>
   {% regroup equipment_list by category as groups %}
   {% for group in groups %}
-    <section class="mb-8">
+    <section class="mb-10">
       <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{{ group.grouper }}</h2>
-      <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {% for item in group.list %}
-          <li class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-            <p class="font-medium">{{ item.name }}</p>
-            {% if item.description %}<p class="mt-1 text-sm text-slate-600">{{ item.description }}</p>{% endif %}
+          <li>
+            <a href="{% url 'inventory:equipment' item.pk %}" class="group block overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 transition hover:shadow-md">
+              {% with cover=item.images.all.0 %}
+                <img src="{{ cover.image.url }}" alt="{{ item.name }}" loading="lazy" class="aspect-[4/3] w-full bg-slate-100 object-cover">
+              {% endwith %}
+              <div class="space-y-2 p-4">
+                <p class="font-medium group-hover:text-sky-700">{{ item.name }}</p>
+                {% include "includes/availability_badge.html" with equipment=item %}
+              </div>
+            </a>
           </li>
         {% endfor %}
       </ul>
     </section>
   {% empty %}
-    <p class="text-slate-600">Nenhum equipamento disponível no momento.</p>
+    <p class="text-slate-600">Nenhum equipamento no catálogo no momento.</p>
   {% endfor %}
 {% endblock %}

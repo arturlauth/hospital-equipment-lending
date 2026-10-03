@@ -5,7 +5,7 @@ import pytest
 from django.db import IntegrityError
 from django.urls import reverse
 
-from hospitalequip.inventory.models import Category, Equipment, Warehouse
+from hospitalequip.inventory.models import Category, Equipment, EquipmentImage, Warehouse
 from hospitalequip.lending.models import Loan, Person
 
 
@@ -20,30 +20,98 @@ def walkers():
 
 
 @pytest.fixture
-def lent_and_free(warehouse, walkers):
-    lent = Equipment.objects.create(name="Andador A", category=walkers, warehouse=warehouse)
-    free = Equipment.objects.create(name="Andador B", category=walkers, warehouse=warehouse)
-    person = Person.objects.create(
-        name="Pessoa Teste", cpf="00000000099", birth_date=date(1950, 1, 1), phone="0"
+def make_item(warehouse, walkers):
+    """An equipment with `images` photo rows (no real files needed to test the rules)."""
+
+    def make(images=3, **fields):
+        item = Equipment.objects.create(
+            name=fields.pop("name", "Andador"), category=walkers, warehouse=warehouse, **fields
+        )
+        for n in range(images):
+            EquipmentImage.objects.create(equipment=item, image=f"equipment/{item.pk}-{n}.jpg")
+        return item
+
+    return make
+
+
+def lend(item, due_date=None):
+    person, _ = Person.objects.get_or_create(
+        cpf="00000000099",
+        defaults={"name": "Pessoa Teste", "birth_date": date(1950, 1, 1), "phone": "0"},
     )
-    loan = Loan.objects.create(equipment=lent, person=person, lent_date=date(2026, 9, 1))
-    return loan, free
+    return Loan.objects.create(
+        equipment=item, person=person, lent_date=date(2026, 9, 1), due_date=due_date
+    )
+
+
+def catalog(client):
+    return {e.pk: e for e in client.get(reverse("inventory:catalog")).context["equipment_list"]}
+
+
+# Rule: the public sees only items that are not written off and have at least 3 photos.
 
 
 @pytest.mark.django_db
-def test_catalog_hides_equipment_on_open_loan(client, lent_and_free):
-    _, free = lent_and_free
-    response = client.get(reverse("inventory:catalog"))
-    assert list(response.context["equipment_list"]) == [free]
+def test_catalog_lists_an_active_item_with_three_photos_as_available(client, make_item):
+    item = make_item()
+    assert catalog(client)[item.pk].is_available
 
 
 @pytest.mark.django_db
-def test_catalog_shows_equipment_again_once_returned(client, lent_and_free):
-    loan, free = lent_and_free
+def test_catalog_hides_an_item_with_fewer_than_three_photos(client, make_item):
+    item = make_item(images=2)
+    assert item.pk not in catalog(client)
+
+
+@pytest.mark.django_db
+def test_catalog_hides_a_written_off_item(client, make_item):
+    item = make_item(status=Equipment.Status.WRITTEN_OFF)
+    assert item.pk not in catalog(client)
+
+
+@pytest.mark.django_db
+def test_equipment_page_is_not_found_for_a_hidden_item(client, make_item):
+    item = make_item(images=2)
+    response = client.get(reverse("inventory:equipment", args=[item.pk]))
+    assert response.status_code == 404
+
+
+# Rule: a lent or damaged item stays listed, as unavailable; a lent one shows when it is due back.
+
+
+@pytest.mark.django_db
+def test_lent_item_is_unavailable_and_shows_its_due_date(client, make_item):
+    item = make_item()
+    lend(item, due_date=date(2027, 3, 1))
+    shown = catalog(client)[item.pk]
+    assert not shown.is_available
+    assert shown.lent_until == date(2027, 3, 1)
+
+
+@pytest.mark.django_db
+def test_item_is_available_again_once_returned(client, make_item):
+    item = make_item()
+    loan = lend(item)
     loan.return_date = date(2026, 9, 10)
     loan.save()
-    response = client.get(reverse("inventory:catalog"))
-    assert set(response.context["equipment_list"]) == {loan.equipment, free}
+    shown = catalog(client)[item.pk]
+    assert shown.is_available
+    assert shown.lent_until is None
+
+
+@pytest.mark.django_db
+def test_damaged_item_is_unavailable(client, make_item):
+    item = make_item(status=Equipment.Status.DAMAGED)
+    assert not catalog(client)[item.pk].is_available
+
+
+@pytest.mark.django_db
+def test_equipment_page_shows_availability(client, make_item):
+    item = make_item()
+    lend(item, due_date=date(2027, 3, 1))
+    response = client.get(reverse("inventory:equipment", args=[item.pk]))
+    assert not response.context["equipment"].is_available
+    assert response.context["equipment"].lent_until == date(2027, 3, 1)
 
 
 # Rule: the asset tag is the category code + the next number in that category, assigned once.
