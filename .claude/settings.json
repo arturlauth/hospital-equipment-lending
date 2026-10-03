@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest *)",
+      "PowerShell(uv run pytest *)",
+      "Bash(uv run python manage.py *)",
+      "PowerShell(uv run python manage.py *)",
+      "Bash(git switch -c *)",
+      "PowerShell(git switch -c *)"
+    ],
+    "deny": [
+      "Bash(git commit *)",
+      "PowerShell(git commit *)",
+      "Bash(git push *)",
+      "PowerShell(git push *)",
+      "Bash(git merge *)",
+      "PowerShell(git merge *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$(git -C \"$CLAUDE_PROJECT_DIR\" branch --show-current)\" = \"main\" ]; then echo 'On main: branch first (git switch -c feat/<slug>, fix/<slug> or setup/<slug>).' >&2; exit 2; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && uv run pytest -q -x >&2 || exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

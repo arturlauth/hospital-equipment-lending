@@ -23,6 +23,30 @@ Lending system for hospital equipment. Monorepo, one product.
 - **Learning stays out of this repo.** Experiments, study notes and trial-and-error go to
   `C:\Users\artur\Documents\Learning`.
 
+## Git flow
+
+- One branch per change off `main`: `feat/<slug>`, `fix/<slug>` or `setup/<slug>`. Never edit on `main`.
+- Artur commits, pushes, opens the PR and merges (merge commit) himself. Claude creates the branch,
+  makes the changes and stops — no `git commit`, `push` or `merge`. Enforced in `.claude/settings.json`.
+
+## Commands
+
+Managed with `uv`. Settings read `.env` (python-dotenv); `DJANGO_SECRET_KEY` and `POSTGRES_DB/USER/PASSWORD/HOST/PORT`
+are required — `.env.example` lists only the first two.
+
+- DB: `docker compose up -d db` (Postgres 18 on 5432)
+- Migrate / run: `uv run python manage.py migrate`, `uv run python manage.py runserver`
+- Demo data: `uv run python manage.py loaddata demo_inventory demo_lending` (inventory first)
+- Tests: `uv run pytest`; one test: `uv run pytest hospitalequip/lending/tests.py::test_name`
+  (needs the DB running — pytest-django creates a test database)
+
+## Architecture
+
+Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse, Equipment) and
+`lending` (Person, Loan). Dependency runs one way: `lending` → `inventory` (Loan FKs Equipment), never
+back. ADR 0004 calls for Import Linter to enforce this, but it is not configured yet. Lending rules
+(e.g. one open loan per equipment, date ordering) are DB constraints in `Loan.Meta.constraints`.
+
 ## Decisions
 
 See `docs/adr/README.md`. Accepted so far: responsive web app, Django backend, Django templates +
