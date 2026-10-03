@@ -8,4 +8,5 @@
 | [0004](0004-architecture-style-enforced-app-boundaries.md) | Architecture style: Django apps with enforced code boundaries | Accepted |
 | [0005](0005-database-postgresql.md) | Database: PostgreSQL | Accepted |
 | [0006](0006-testing-pytest.md) | Testing: pytest + pytest-django | Accepted |
+| [0007](0007-lint-format-ruff.md) | Lint and format: Ruff | Accepted |
 | - | Repo layout: monorepo | Accepted (no ADR file) |
