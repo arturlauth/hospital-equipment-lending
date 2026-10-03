@@ -1,0 +1,106 @@
+[
+  {
+    "model": "inventory.warehouse",
+    "pk": 1,
+    "fields": {
+      "name": "Depósito Central",
+      "address": "Rua Exemplo, 100 - Centro"
+    }
+  },
+  {
+    "model": "inventory.warehouse",
+    "pk": 2,
+    "fields": {
+      "name": "Depósito Igreja Matriz",
+      "address": "Praça Exemplo, 1"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 1,
+    "fields": {
+      "name": "Cadeira de rodas adulto",
+      "category": "cadeira de rodas",
+      "description": "Dobrável, aro 24",
+      "warehouse": 1,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 2,
+    "fields": {
+      "name": "Cadeira de rodas infantil",
+      "category": "cadeira de rodas",
+      "description": "",
+      "warehouse": 1,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 3,
+    "fields": {
+      "name": "Cama hospitalar manual",
+      "category": "cama hospitalar",
+      "description": "Com grades laterais",
+      "warehouse": 1,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 4,
+    "fields": {
+      "name": "Cama hospitalar elétrica",
+      "category": "cama hospitalar",
+      "description": "",
+      "warehouse": 2,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 5,
+    "fields": {
+      "name": "Par de muletas axilares",
+      "category": "muleta",
+      "description": "Regulável",
+      "warehouse": 1,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 6,
+    "fields": {
+      "name": "Andador articulado",
+      "category": "andador",
+      "description": "",
+      "warehouse": 2,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 7,
+    "fields": {
+      "name": "Cadeira de banho",
+      "category": "cadeira de banho",
+      "description": "",
+      "warehouse": 2,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "inventory.equipment",
+    "pk": 8,
+    "fields": {
+      "name": "Colchão pneumático",
+      "category": "colchão",
+      "description": "Antiescaras",
+      "warehouse": 1,
+      "created_at": "2026-09-01T12:00:00Z"
+    }
+  }
+]
