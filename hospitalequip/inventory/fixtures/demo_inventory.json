@@ -16,14 +16,68 @@
     }
   },
   {
+    "model": "inventory.category",
+    "pk": 1,
+    "fields": {
+      "name": "Andador",
+      "code": "ANDADOR"
+    }
+  },
+  {
+    "model": "inventory.category",
+    "pk": 2,
+    "fields": {
+      "name": "Cadeira de banho",
+      "code": "CADEIRA_DE_BANHO"
+    }
+  },
+  {
+    "model": "inventory.category",
+    "pk": 3,
+    "fields": {
+      "name": "Cadeira de rodas",
+      "code": "CADEIRA_DE_RODAS"
+    }
+  },
+  {
+    "model": "inventory.category",
+    "pk": 4,
+    "fields": {
+      "name": "Cama hospitalar",
+      "code": "CAMA_HOSPITALAR"
+    }
+  },
+  {
+    "model": "inventory.category",
+    "pk": 5,
+    "fields": {
+      "name": "Colchão",
+      "code": "COLCHAO"
+    }
+  },
+  {
+    "model": "inventory.category",
+    "pk": 6,
+    "fields": {
+      "name": "Muleta",
+      "code": "MULETA"
+    }
+  },
+  {
     "model": "inventory.equipment",
     "pk": 1,
     "fields": {
       "name": "Cadeira de rodas adulto",
-      "category": "cadeira de rodas",
       "description": "Dobrável, aro 24",
       "warehouse": 1,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 3,
+      "sequence": 1,
+      "tag": "CADEIRA_DE_RODAS 0001",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   },
   {
@@ -31,10 +85,16 @@
     "pk": 2,
     "fields": {
       "name": "Cadeira de rodas infantil",
-      "category": "cadeira de rodas",
       "description": "",
       "warehouse": 1,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 3,
+      "sequence": 2,
+      "tag": "CADEIRA_DE_RODAS 0002",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   },
   {
@@ -42,10 +102,16 @@
     "pk": 3,
     "fields": {
       "name": "Cama hospitalar manual",
-      "category": "cama hospitalar",
       "description": "Com grades laterais",
       "warehouse": 1,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 4,
+      "sequence": 1,
+      "tag": "CAMA_HOSPITALAR 0001",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   },
   {
@@ -53,10 +119,16 @@
     "pk": 4,
     "fields": {
       "name": "Cama hospitalar elétrica",
-      "category": "cama hospitalar",
       "description": "",
       "warehouse": 2,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 4,
+      "sequence": 2,
+      "tag": "CAMA_HOSPITALAR 0002",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   },
   {
@@ -64,10 +136,16 @@
     "pk": 5,
     "fields": {
       "name": "Par de muletas axilares",
-      "category": "muleta",
       "description": "Regulável",
       "warehouse": 1,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 6,
+      "sequence": 1,
+      "tag": "MULETA 0001",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   },
   {
@@ -75,10 +153,16 @@
     "pk": 6,
     "fields": {
       "name": "Andador articulado",
-      "category": "andador",
       "description": "",
       "warehouse": 2,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 1,
+      "sequence": 1,
+      "tag": "ANDADOR 0001",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   },
   {
@@ -86,10 +170,16 @@
     "pk": 7,
     "fields": {
       "name": "Cadeira de banho",
-      "category": "cadeira de banho",
       "description": "",
       "warehouse": 2,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 2,
+      "sequence": 1,
+      "tag": "CADEIRA_DE_BANHO 0001",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   },
   {
@@ -97,10 +187,16 @@
     "pk": 8,
     "fields": {
       "name": "Colchão pneumático",
-      "category": "colchão",
       "description": "Antiescaras",
       "warehouse": 1,
-      "created_at": "2026-09-01T12:00:00Z"
+      "created_at": "2026-09-01T12:00:00Z",
+      "category": 5,
+      "sequence": 1,
+      "tag": "COLCHAO 0001",
+      "brand": "",
+      "status": "active",
+      "value": null,
+      "acquired_on": null
     }
   }
 ]

@@ -52,7 +52,7 @@ are required; `.env.example` lists every variable (`config/test_env_example.py` 
 
 ## Architecture
 
-Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse, Equipment) and
+Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse, Category, Equipment with images and spec rows) and
 `lending` (Person, Loan), `staff` (login, roles as auth Groups created by migration). Shared
 layout in `templates/base.html`. An app's models are imported only by that app, enforced by Import Linter
 (`uv run lint-imports`; contracts in `pyproject.toml`); other apps go through its `services.py`.
@@ -79,4 +79,5 @@ stated elsewhere in this file, in the code, or in git history does not get a row
 
 | Date | Trap / mistake | Correct approach |
 |---|---|---|
+| 2026-10-03 | Weakening a `Meta.constraints` entry to watch its test fail changed nothing: the test DB is built from migrations, so the test stayed green | Mutate the constraint in the migration file and run with `--create-db`; then restore |
 | 2026-10-03 | `.env.example` drifted from `settings.py` (listed 2 of 7 variables) and the gap was logged as a debt instead of fixed; a fresh clone fails at startup with `KeyError` | Add the variable to `.env.example` in the same change that reads it; `config/test_env_example.py` now enforces this |

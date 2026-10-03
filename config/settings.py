@@ -127,6 +127,10 @@ STATIC_URL = "static/"
 # static/css/app.css is built by Tailwind from assets/tailwind.css (ADR 0008) and not versioned.
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Uploaded files (equipment photos). Local disk until the infra phase picks a storage provider.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 # Authentication
 
