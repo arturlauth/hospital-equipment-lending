@@ -14,6 +14,12 @@ Lending system for hospital equipment. Monorepo, one product.
   A detailed prompt is context, not a request for length; a seven-section draft was rejected.
 - **README states only purpose, kept open-ended ("ongoing project").** No status, progress or
   stack details — they go stale every session. Bilingual (English + pt-BR) in one file for now.
+- **Test business rules, not plumbing.** A test earns its place only if a realistic code change
+  would turn it red. Write each rule as a sentence ("one open loan per equipment"); it gets a
+  happy-path test plus one per edge: boundaries (same day, empty), state transitions (lend after
+  return, return twice), concurrency (double submit), bad references (written-off equipment).
+  Never test Django/PostgreSQL themselves — test our constraints, models and logic. See a new
+  test fail once before trusting it.
 - **Learning stays out of this repo.** Experiments, study notes and trial-and-error go to
   `C:\Users\artur\Documents\Learning`.
 
