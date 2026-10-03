@@ -1,0 +1,5 @@
+{% if equipment.is_available %}
+  <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200"><span class="size-1.5 rounded-full bg-emerald-500"></span>Disponível</span>
+{% else %}
+  <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200"><span class="size-1.5 rounded-full bg-slate-400"></span>Indisponível{% if equipment.lent_until %} · volta em {{ equipment.lent_until|date:"F/Y" }}{% endif %}</span>
+{% endif %}

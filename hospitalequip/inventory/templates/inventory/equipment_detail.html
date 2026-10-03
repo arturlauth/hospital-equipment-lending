@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ equipment.name }}{% endblock %}
+
+{% block content %}
+  <a href="{% url 'inventory:catalog' %}" class="text-sm text-slate-500 hover:text-sky-700">← Equipamentos</a>
+
+  <div class="mt-4 grid gap-8 lg:grid-cols-2">
+    {# Photos: swipe on mobile, scroll on desktop #}
+    <div class="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      {% for photo in equipment.images.all %}
+        <img src="{{ photo.image.url }}" alt="{{ equipment.name }}, foto {{ forloop.counter }}"
+             class="aspect-[4/3] w-[85%] shrink-0 snap-center rounded-2xl bg-slate-100 object-cover sm:w-full">
+      {% endfor %}
+    </div>
+
+    <div>
+      <p class="text-sm text-slate-500">{{ equipment.category }} · {{ equipment.tag }}</p>
+      <h1 class="mt-1 text-2xl font-semibold">{{ equipment.name }}</h1>
+      {% if equipment.brand %}<p class="text-slate-600">{{ equipment.brand }}</p>{% endif %}
+      <div class="mt-3">{% include "includes/availability_badge.html" %}</div>
+
+      {% if equipment.description %}
+        <p class="mt-5 whitespace-pre-line text-slate-700">{{ equipment.description }}</p>
+      {% endif %}
+
+      <div class="mt-5 rounded-xl bg-white p-4 text-sm ring-1 ring-slate-200">
+        <p class="font-medium">Onde está</p>
+        <p class="text-slate-600">{{ equipment.warehouse.name }}{% if equipment.warehouse.address %} — {{ equipment.warehouse.address }}{% endif %}</p>
+      </div>
+    </div>
+  </div>
+
+  {% if equipment.specs.all %}
+    <h2 class="mt-10 mb-3 text-lg font-semibold">Especificações</h2>
+    <div class="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+      {% regroup equipment.specs.all by section as sections %}
+      {% for section in sections %}
+        <h3 class="bg-sky-50 px-4 py-2.5 text-sm font-semibold text-sky-800">{{ section.grouper }}</h3>
+        <dl class="divide-y divide-slate-100">
+          {% for spec in section.list %}
+            <div class="grid grid-cols-2 gap-4 px-4 py-2.5 text-sm">
+              <dt class="text-slate-600">{{ spec.label }}</dt>
+              <dd class="font-medium">{{ spec.value }}</dd>
+            </div>
+          {% endfor %}
+        </dl>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

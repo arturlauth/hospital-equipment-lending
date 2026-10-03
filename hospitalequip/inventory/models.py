@@ -1,5 +1,8 @@
 from django.db import models, transaction
-from django.db.models import Max, Q
+from django.db.models import Count, Max, Q
+
+MIN_PUBLIC_IMAGES = 3
+OPEN_LOAN = Q(loans__return_date__isnull=True)
 
 
 class Warehouse(models.Model):
@@ -36,6 +39,27 @@ class Category(models.Model):
         super().save(*args, **kwargs)
 
 
+class EquipmentQuerySet(models.QuerySet):
+    def with_availability(self):
+        """Annotate `open_loans` and `lent_until` (due date of the open loan), read from lending.
+
+        Lent is derived from an open loan, never stored on Equipment.
+        """
+        return self.annotate(
+            open_loans=Count("loans", filter=OPEN_LOAN, distinct=True),
+            lent_until=Max("loans__due_date", filter=OPEN_LOAN),
+        )
+
+    def public(self):
+        """Items shown to the public: not written off and with at least MIN_PUBLIC_IMAGES photos."""
+        return (
+            self.exclude(status=Equipment.Status.WRITTEN_OFF)
+            .annotate(image_count=Count("images", distinct=True))
+            .filter(image_count__gte=MIN_PUBLIC_IMAGES)
+            .with_availability()
+        )
+
+
 class Equipment(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Ativo"
@@ -68,6 +92,8 @@ class Equipment(models.Model):
     acquired_on = models.DateField("data de aquisição", null=True, blank=True)
     created_at = models.DateTimeField("cadastrado em", auto_now_add=True)
 
+    objects = EquipmentQuerySet.as_manager()
+
     class Meta:
         verbose_name = "equipamento"
         verbose_name_plural = "equipamentos"
@@ -98,6 +124,11 @@ class Equipment(models.Model):
                 super().save(*args, **kwargs)
             return
         super().save(*args, **kwargs)
+
+    @property
+    def is_available(self):
+        """Lendable right now. Needs a queryset built with `with_availability()`."""
+        return self.status == self.Status.ACTIVE and self.open_loans == 0
 
 
 class EquipmentImage(models.Model):
