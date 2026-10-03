@@ -10,6 +10,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.15",
     "pytest>=9.1.1",
     "pytest-django>=4.14.0",
     "ruff>=0.16.10",
@@ -25,3 +26,19 @@ extend-exclude = ["**/migrations/*"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "B", "DJ"]
+
+[tool.importlinter]
+root_package = "hospitalequip"
+
+[[tool.importlinter.contracts]]
+name = "Only inventory imports inventory models"
+type = "protected"
+protected_modules = ["hospitalequip.inventory.models"]
+allowed_importers = ["hospitalequip.inventory"]
+ignore_imports = ["hospitalequip.lending.tests -> hospitalequip.inventory.models"]
+
+[[tool.importlinter.contracts]]
+name = "Only lending imports lending models"
+type = "protected"
+protected_modules = ["hospitalequip.lending.models"]
+allowed_importers = ["hospitalequip.lending"]
