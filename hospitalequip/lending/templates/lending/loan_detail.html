@@ -32,7 +32,15 @@
         <form method="post" action="{% url 'lending:return' loan.pk %}" class="mt-4 space-y-4" novalidate>
           {% csrf_token %}
           {% include "includes/field.html" with field=return_form.return_date %}
-          <label class="flex items-center gap-2"><span class="[&>input]:size-5">{{ return_form.damaged }}</span> Voltou com defeito</label>
+          {% for error in return_form.non_field_errors %}<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>{% endfor %}
+          <fieldset>
+            <legend class="text-sm font-bold">{{ return_form.condition.label }}</legend>
+            <div class="mt-1 flex flex-wrap gap-2">
+              {% for choice in return_form.condition %}
+                <label class="flex min-h-11 items-center gap-2 rounded-full px-3 ring-1 ring-stone-300 has-[:checked]:bg-teal-50 has-[:checked]:ring-teal-600">{{ choice.tag }} {{ choice.choice_label }}</label>
+              {% endfor %}
+            </div>
+          </fieldset>
           <button type="submit" class="w-full rounded-full bg-teal-700 py-3 font-bold text-white hover:bg-teal-800">Confirmar devolução</button>
         </form>
       </details>

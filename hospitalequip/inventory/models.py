@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Count, Max, Q
 
@@ -51,9 +52,9 @@ class EquipmentQuerySet(models.QuerySet):
         )
 
     def public(self):
-        """Items shown to the public: not written off and with at least MIN_PUBLIC_IMAGES photos."""
+        """Items shown to the public: not lost or written off, with at least MIN_PUBLIC_IMAGES photos."""
         return (
-            self.exclude(status=Equipment.Status.WRITTEN_OFF)
+            self.exclude(status__in=[Equipment.Status.LOST, Equipment.Status.WRITTEN_OFF])
             .annotate(image_count=Count("images", distinct=True))
             .filter(image_count__gte=MIN_PUBLIC_IMAGES)
             .with_availability()
@@ -63,7 +64,8 @@ class EquipmentQuerySet(models.QuerySet):
 class Equipment(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Ativo"
-        DAMAGED = "damaged", "Danificado"
+        DAMAGED = "damaged", "Em manutenção"
+        LOST = "lost", "Extraviado"
         WRITTEN_OFF = "written_off", "Baixado"
 
     name = models.CharField("nome", max_length=100)
@@ -129,6 +131,39 @@ class Equipment(models.Model):
     def is_available(self):
         """Lendable right now. Needs a queryset built with `with_availability()`."""
         return self.status == self.Status.ACTIVE and self.open_loans == 0
+
+
+class EquipmentStatusLog(models.Model):
+    """One status change, written only by `services.change_status`. Newest first."""
+
+    equipment = models.ForeignKey(
+        Equipment,
+        on_delete=models.PROTECT,
+        related_name="status_logs",
+        verbose_name="equipamento",
+    )
+    from_status = models.CharField("de", max_length=20, choices=Equipment.Status.choices)
+    to_status = models.CharField("para", max_length=20, choices=Equipment.Status.choices)
+    effective_on = models.DateField("em")
+    reason = models.TextField("motivo")
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", verbose_name="por"
+    )
+    created_at = models.DateTimeField("registrado em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "mudança de situação"
+        verbose_name_plural = "mudanças de situação"
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(from_status=models.F("to_status")),
+                name="status_log_changes_status",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.equipment}: {self.from_status} → {self.to_status}"
 
 
 class EquipmentImage(models.Model):

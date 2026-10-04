@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Registros · Situação{% endblock %}
+
+{% block content %}
+  {% include "includes/log_tabs.html" with placeholder="Equipamento ou patrimônio" %}
+  <ul class="mt-4 divide-y divide-stone-100 overflow-hidden rounded-2xl bg-white text-sm ring-1 ring-stone-200">
+    {% for change in changes %}
+      <li class="px-4 py-3">
+        <a href="{% url 'inventory:equipment' change.equipment.pk %}" class="font-bold hover:text-teal-700">{{ change.equipment.name }}</a> <span class="text-stone-500">{{ change.equipment.tag }}</span><br>
+        <b>{{ change.get_from_status_display }} → {{ change.get_to_status_display }}</b> em {{ change.effective_on|date:"d/m/Y" }} · <span class="text-stone-600">{{ change.reason }}</span><br>
+        <span class="text-xs text-stone-500">{{ change.changed_by.get_full_name|default:change.changed_by.username }} · registrado {{ change.created_at|date:"d/m/Y H:i" }}</span>
+      </li>
+    {% empty %}
+      <li class="px-4 py-6 text-center text-stone-500">Nenhuma mudança de situação.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

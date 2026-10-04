@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Registros · Empréstimos{% endblock %}
+
+{% block content %}
+  {% include "includes/log_tabs.html" with placeholder="Equipamento, patrimônio ou pessoa" %}
+  <ul class="mt-4 divide-y divide-stone-100 overflow-hidden rounded-2xl bg-white text-sm ring-1 ring-stone-200">
+    {% for event in events %}
+      <li class="px-4 py-3">
+        <a href="{% url 'lending:loan' event.loan.pk %}" class="font-bold hover:text-teal-700">{{ event.loan.equipment.name }}</a> <span class="text-stone-500">{{ event.loan.equipment.tag }} · {{ event.loan.person.name }}</span><br>
+        <b>{{ event.get_action_display }}</b>{% if event.reason %} · <span class="text-stone-600">{{ event.reason }}</span>{% endif %}
+        {% for label, old, new in event.change_rows %}<br><span class="text-stone-600">{{ label }}: {{ old|date:"d/m/Y"|default:"—" }} → {{ new|date:"d/m/Y"|default:"—" }}</span>{% endfor %}
+        <br><span class="text-xs text-stone-500">{{ event.changed_by.get_full_name|default:event.changed_by.username }} · {{ event.created_at|date:"d/m/Y H:i" }}</span>
+      </li>
+    {% empty %}
+      <li class="px-4 py-6 text-center text-stone-500">Nenhum registro de empréstimo.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

@@ -2,11 +2,13 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from django.contrib.auth.models import Group, User
 from django.db import IntegrityError
 from django.urls import reverse
 
 from hospitalequip.inventory.models import Category, Equipment, EquipmentImage, Warehouse
 from hospitalequip.lending.models import Loan, Person
+from hospitalequip.staff import roles
 
 
 @pytest.fixture
@@ -190,3 +192,152 @@ def test_only_available_filter_hides_lent_and_damaged_items(client, make_item):
     make_item(status=Equipment.Status.DAMAGED)
     response = client.get(reverse("inventory:catalog"), {"disponiveis": "1"})
     assert [e.pk for e in response.context["equipment_list"]] == [free.pk]
+
+
+# Rule: status changes go through change_status, logged; write-off is Gestor only, never with an
+# open loan; written off is final; dates are not in the future nor before the last change.
+
+
+@pytest.fixture
+def staff_user(db):
+    def make(role):
+        user = User.objects.create_user(role, password="x")
+        user.groups.add(Group.objects.get(name=role))
+        return user
+
+    return make
+
+
+def set_status(client, item, to, on="2026-09-10", reason="Roda quebrada"):
+    return client.post(
+        reverse("inventory:equipment_status", args=[item.pk]),
+        {"to_status": to, "effective_on": on, "reason": reason},
+    )
+
+
+@pytest.mark.django_db
+def test_attendant_sends_equipment_to_maintenance_and_it_is_logged(client, make_item, staff_user):
+    item, user = make_item(), staff_user(roles.ATTENDANT)
+    client.force_login(user)
+    assert set_status(client, item, "damaged").status_code == 302
+    item.refresh_from_db()
+    change = item.status_logs.get()
+    assert item.status == Equipment.Status.DAMAGED
+    assert (change.from_status, change.to_status) == ("active", "damaged")
+    assert (change.effective_on, change.reason, change.changed_by) == (
+        date(2026, 9, 10),
+        "Roda quebrada",
+        user,
+    )
+
+
+@pytest.mark.django_db
+def test_attendant_cannot_write_off(client, make_item, staff_user):
+    item = make_item()
+    client.force_login(staff_user(roles.ATTENDANT))
+    set_status(client, item, "written_off")
+    item.refresh_from_db()
+    assert item.status == Equipment.Status.ACTIVE
+    assert not item.status_logs.exists()
+
+
+@pytest.mark.django_db
+def test_gestor_writes_off_a_lost_item(client, make_item, staff_user):
+    item = make_item(status=Equipment.Status.LOST)
+    client.force_login(staff_user(roles.MANAGER))
+    set_status(client, item, "written_off", reason="Não encontrado")
+    item.refresh_from_db()
+    assert item.status == Equipment.Status.WRITTEN_OFF
+
+
+@pytest.mark.django_db
+def test_write_off_is_blocked_while_a_loan_is_open(client, make_item, staff_user):
+    item = make_item()
+    lend(item)
+    client.force_login(staff_user(roles.MANAGER))
+    set_status(client, item, "written_off")
+    item.refresh_from_db()
+    assert item.status == Equipment.Status.ACTIVE
+
+
+@pytest.mark.django_db
+def test_written_off_is_final(client, make_item, staff_user):
+    item = make_item(status=Equipment.Status.WRITTEN_OFF)
+    client.force_login(staff_user(roles.MANAGER))
+    set_status(client, item, "active")
+    item.refresh_from_db()
+    assert item.status == Equipment.Status.WRITTEN_OFF
+
+
+@pytest.mark.parametrize("on", ["2999-01-01", "2026-09-04"])
+@pytest.mark.django_db
+def test_status_date_is_not_in_the_future_nor_before_the_last_change(
+    client, make_item, staff_user, on
+):
+    item = make_item()
+    client.force_login(staff_user(roles.ATTENDANT))
+    set_status(client, item, "damaged", on="2026-09-05")
+    response = set_status(client, item, "active", on=on)
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.status == Equipment.Status.DAMAGED
+
+
+@pytest.mark.django_db
+def test_status_change_needs_a_reason(client, make_item, staff_user):
+    item = make_item()
+    client.force_login(staff_user(roles.ATTENDANT))
+    set_status(client, item, "damaged", reason="  ")
+    assert not item.status_logs.exists()
+
+
+@pytest.mark.django_db
+def test_database_rejects_a_change_to_the_same_status(make_item, staff_user):
+    with pytest.raises(IntegrityError):
+        make_item().status_logs.create(
+            from_status="active",
+            to_status="active",
+            effective_on=date(2026, 9, 1),
+            reason="x",
+            changed_by=staff_user(roles.MANAGER),
+        )
+
+
+@pytest.mark.django_db
+def test_lost_item_is_hidden_from_the_public_but_staff_still_open_it(client, make_item, staff_user):
+    item = make_item(status=Equipment.Status.LOST)
+    assert item.pk not in catalog(client)
+    url = reverse("inventory:equipment", args=[item.pk])
+    assert client.get(url).status_code == 404
+    client.force_login(staff_user(roles.ATTENDANT))
+    assert client.get(url).status_code == 200
+
+
+# Rule: logs live only under Registros, which only the Gestor opens.
+
+
+@pytest.mark.django_db
+def test_registros_lists_status_logs_for_the_gestor(client, make_item, staff_user):
+    item = make_item(name="Andador X")
+    client.force_login(staff_user(roles.ATTENDANT))
+    set_status(client, item, "damaged")
+    client.force_login(staff_user(roles.MANAGER))
+    response = client.get(reverse("inventory:status_log"), {"q": item.tag})
+    assert [c.equipment for c in response.context["changes"]] == [item]
+    assert not client.get(reverse("inventory:status_log"), {"q": "nada"}).context["changes"]
+
+
+@pytest.mark.django_db
+def test_registros_is_forbidden_to_attendants(client, staff_user):
+    client.force_login(staff_user(roles.ATTENDANT))
+    assert client.get(reverse("inventory:status_log")).status_code == 403
+
+
+@pytest.mark.django_db
+def test_equipment_page_never_shows_the_status_log(client, make_item, staff_user):
+    item = make_item()
+    client.force_login(staff_user(roles.ATTENDANT))
+    set_status(client, item, "damaged", reason="Motivo secreto")
+    client.force_login(staff_user(roles.MANAGER))
+    page = client.get(reverse("inventory:equipment", args=[item.pk])).content.decode()
+    assert "Motivo secreto" not in page

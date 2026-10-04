@@ -21,6 +21,7 @@
         {% if user.is_authenticated %}
           <a href="{% url 'lending:loans' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Histórico</a>
           <a href="{% url 'lending:people' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Pessoas</a>
+          {% if is_manager %}<a href="{% url 'inventory:status_log' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Registros</a>{% endif %}
           <form method="post" action="{% url 'staff:logout' %}">
             {% csrf_token %}
             <button type="submit" class="text-stone-600 hover:text-teal-700">Sair</button>

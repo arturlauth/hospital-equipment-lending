@@ -13,6 +13,10 @@
       {% include "includes/field.html" with field=form.due_date %}
       {% include "includes/field.html" with field=form.return_date %}
       <p class="text-sm text-stone-500">{{ form.return_date.help_text }}</p>
+      <label class="block text-sm font-bold">{{ form.reason.label }}
+        <span class="mt-1 block [&>textarea]:w-full [&>textarea]:rounded-lg [&>textarea]:border [&>textarea]:px-3 [&>textarea]:py-2 [&>textarea]:text-base {% if form.reason.errors %}[&>textarea]:border-red-400{% else %}[&>textarea]:border-stone-300{% endif %}">{{ form.reason }}</span>
+        {% for error in form.reason.errors %}<span class="mt-1 block text-sm font-normal text-red-600">{{ error }}</span>{% endfor %}
+      </label>
       <div class="flex gap-3">
         <button type="submit" class="flex-1 rounded-full bg-teal-700 py-3 font-bold text-white hover:bg-teal-800">Salvar</button>
         <a href="{% url 'lending:loan' loan.pk %}" class="rounded-lg px-4 py-3 text-stone-600 hover:bg-stone-100">Cancelar</a>
