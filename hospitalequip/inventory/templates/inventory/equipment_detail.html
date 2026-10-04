@@ -25,6 +25,19 @@
       <h1 class="mt-1 text-3xl font-bold tracking-tight">{{ equipment.name }}</h1>
       {% if equipment.brand %}<p class="text-stone-600">{{ equipment.brand }}</p>{% endif %}
       <div class="mt-3">{% include "includes/availability_badge.html" %}</div>
+      {% if staff %}
+        <div class="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+          <p class="text-xs font-bold uppercase tracking-wider text-stone-500">Equipe</p>
+          {% if open_loan %}
+            <p class="mt-1">Com <a href="{% url 'lending:person' open_loan.person.pk %}" class="font-bold hover:text-teal-700">{{ open_loan.person.name }}</a> desde {{ open_loan.lent_date|date:"d/m/Y" }}.</p>
+            <a href="{% url 'lending:loan' open_loan.pk %}" class="mt-3 flex min-h-12 items-center justify-center rounded-full border border-stone-300 font-bold hover:bg-stone-50">Ver empréstimo</a>
+          {% elif equipment.is_available %}
+            <a href="{% url 'lending:lend' equipment.pk %}" class="mt-2 flex min-h-12 items-center justify-center rounded-full bg-teal-700 font-bold text-white hover:bg-teal-800">Emprestar</a>
+          {% else %}
+            <p class="mt-1 text-stone-600">Fora de uso ({{ equipment.get_status_display|lower }}).</p>
+          {% endif %}
+        </div>
+      {% endif %}
       {% if equipment.description %}
         <p class="mt-4 whitespace-pre-line text-lg leading-relaxed">{{ equipment.description }}</p>
       {% endif %}

@@ -2,7 +2,7 @@ from datetime import date
 
 from django import forms
 
-from .models import Person
+from .models import Loan, Person
 from .validators import only_digits
 
 
@@ -48,3 +48,38 @@ class PersonForm(forms.ModelForm):
         if birth_date > date.today():
             raise forms.ValidationError("A data de nascimento não pode estar no futuro.")
         return birth_date
+
+
+class LoanForm(forms.ModelForm):
+    """Borrower and guarantor arrive as ids from the HTMX person picker."""
+
+    person = forms.ModelChoiceField(
+        Person.objects.all(),
+        widget=forms.HiddenInput,
+        label="Quem recebe",
+        error_messages={"required": "Escolha quem recebe o equipamento."},
+    )
+    guarantor = forms.ModelChoiceField(
+        Person.objects.all(),
+        widget=forms.HiddenInput,
+        label="Fiador",
+        error_messages={"required": "Escolha o fiador."},
+    )
+
+    class Meta:
+        model = Loan
+        fields = ["person", "guarantor", "lent_date", "due_date"]
+        widgets = {
+            "lent_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        person, guarantor = cleaned.get("person"), cleaned.get("guarantor")
+        if person and person == guarantor:
+            self.add_error("guarantor", "O fiador não pode ser quem recebe o equipamento.")
+        lent, due = cleaned.get("lent_date"), cleaned.get("due_date")
+        if lent and due and due < lent:
+            self.add_error("due_date", "A devolução não pode ser antes do empréstimo.")
+        return cleaned
