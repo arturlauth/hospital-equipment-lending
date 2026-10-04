@@ -569,3 +569,89 @@ def test_return_dated_before_the_last_status_change_is_rejected_whole(client, at
     open_loan.refresh_from_db()
     assert open_loan.return_date is None
     assert not open_loan.logs.exists()
+
+
+# --- People overview -----------------------------------------------------------------------
+
+
+@pytest.fixture
+def roles_people(returned_loan):
+    """Borrower: one returned loan + one open loan. Guarantor: vouched once. Idle: no loans."""
+    borrower = returned_loan.person
+    guarantor = Person.objects.create(
+        name="Solidária Teste", cpf="00000000088", birth_date=date(1960, 1, 1), phone="0"
+    )
+    idle = Person.objects.create(
+        name="Sem Empréstimo", cpf="00000000077", birth_date=date(1970, 1, 1), phone="0"
+    )
+    second = Equipment.objects.create(
+        name="Andador",
+        category=Category.objects.create(name="Andador", code="AND"),
+        warehouse=returned_loan.equipment.warehouse,
+    )
+    Loan.objects.create(
+        equipment=second, person=borrower, guarantor=guarantor, lent_date=date(2026, 9, 20)
+    )
+    return borrower, guarantor, idle
+
+
+def listed(client, **params):
+    return {p.name: p for p in client.get(reverse("lending:people"), params).context["people"]}
+
+
+@pytest.mark.django_db
+def test_counts_include_returned_loans_and_keep_roles_apart(client, attendant, roles_people):
+    borrower, guarantor, _ = roles_people
+    people = listed(client)
+    assert (people[borrower.name].borrower_count, people[borrower.name].guarantor_count) == (2, 0)
+    assert (people[guarantor.name].borrower_count, people[guarantor.name].guarantor_count) == (0, 1)
+
+
+@pytest.mark.django_db
+def test_person_without_loans_shows_only_under_todas(client, attendant, roles_people):
+    _, _, idle = roles_people
+    assert idle.name in listed(client)
+    assert idle.name not in listed(client, papel="beneficiario")
+    assert idle.name not in listed(client, papel="solidario")
+
+
+@pytest.mark.django_db
+def test_role_tabs_list_only_people_in_that_role(client, attendant, roles_people):
+    borrower, guarantor, _ = roles_people
+    assert set(listed(client, papel="beneficiario")) == {borrower.name}
+    assert set(listed(client, papel="solidario")) == {guarantor.name}
+
+
+@pytest.mark.django_db
+def test_person_in_both_roles_shows_on_both_tabs(client, attendant, roles_people):
+    borrower, guarantor, _ = roles_people
+    Loan.objects.filter(guarantor=guarantor).update(guarantor=None)
+    loan = Loan.objects.filter(person=borrower, return_date__isnull=False).get()
+    Loan.objects.filter(pk=loan.pk).update(person=guarantor, guarantor=borrower)
+    assert borrower.name in listed(client, papel="beneficiario")
+    assert borrower.name in listed(client, papel="solidario")
+
+
+@pytest.mark.django_db
+def test_why_listed_shows_open_loans_before_the_latest_returned(client, attendant, roles_people):
+    borrower, _, _ = roles_people
+    # The open loan is older than the returned one, so "latest" alone would pick the wrong row.
+    Loan.objects.filter(return_date__isnull=True).update(lent_date=date(2026, 8, 1))
+    why = listed(client, papel="beneficiario")[borrower.name].why
+    assert [(loan.lent_date, loan.return_date) for loan in why] == [(date(2026, 8, 1), None)]
+    Loan.objects.filter(return_date__isnull=True).update(return_date=date(2026, 8, 20))
+    why = listed(client, papel="beneficiario")[borrower.name].why
+    assert [loan.lent_date for loan in why] == [date(2026, 9, 1)]
+
+
+@pytest.mark.django_db
+def test_todas_lists_people_alphabetically_and_search_keeps_the_tab(
+    client, attendant, roles_people
+):
+    Person.objects.create(  # created last, sorts first
+        name="Ana Última", cpf="00000000066", birth_date=date(1980, 1, 1), phone="0"
+    )
+    names = list(listed(client))
+    assert names[0] == "Ana Última" and names == sorted(names)
+    page = client.get(reverse("lending:people"), {"papel": "solidario"}).content.decode()
+    assert '<input type="hidden" name="papel" value="solidario">' in page

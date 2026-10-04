@@ -87,6 +87,9 @@ stated elsewhere in this file, in the code, or in git history does not get a row
 
 | Date | Trap / mistake | Correct approach |
 |---|---|---|
+| 2026-10-04 | `Meta.ordering = ["name"]` vanished once `person_list` added `Count` annotations (Django drops Meta.ordering on aggregated queries); QA caught unsorted Pessoas | Add an explicit `.order_by(...)` to any annotated queryset; test the order with a row created last that sorts first |
+| 2026-10-04 | A `sed` mutation "proved" a test because the pattern no longer matched: `ruff format` had moved the trailing comment, so the fix was never removed | After mutating, `grep -c` the removed text (must be 0) before trusting a red/green result |
+| 2026-10-04 | QA reported a missing element that the code renders: two `runserver` processes were listening on :8000 and one was stale | Before QA, check `netstat -ano` for a single listener on :8000 |
 | 2026-10-04 | `subagent_type: "qa"` failed ("Agent type 'qa' not found") after `/clear`: agents load only at process start, not on clear | Restart Claude Code, or spawn `general-purpose` with `model: sonnet` told to read and follow `.claude/agents/qa.md` |
 | 2026-10-04 | New Tailwind classes did nothing in the browser (chip highlight missing) because `static/css/app.css` was stale; tests and the template were fine | After adding classes, rebuild once (`uv run tailwindcss -i assets/tailwind.css -o static/css/app.css --minify`) or keep `--watch` running before any visual check |
 | 2026-10-04 | `select_for_update()` with `select_related` on a nullable FK (e.g. `Loan.guarantor`) crashes on PostgreSQL: "FOR UPDATE cannot be applied to the nullable side of an outer join" | Lock only the row you change: `select_for_update(of=("self",))` |
