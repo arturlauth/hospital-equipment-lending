@@ -1,5 +1,5 @@
-<label class="block text-sm font-medium {{ class }}">
-  {{ field.label }}{% if not field.field.required %} <span class="font-normal text-slate-400">(opcional)</span>{% endif %}
-  <span class="mt-1 block [&>input]:w-full [&>select]:w-full [&>input]:rounded-lg [&>select]:rounded-lg [&>input]:border [&>select]:border [&>input]:px-3 [&>select]:px-3 [&>input]:py-2 [&>select]:py-2 [&>input]:text-base [&>select]:text-base [&>select]:bg-white {% if field.errors %}[&>input]:border-red-400 [&>select]:border-red-400{% else %}[&>input]:border-slate-300 [&>select]:border-slate-300{% endif %}">{{ field }}</span>
+<label class="block text-sm font-bold {{ class }}">
+  {{ field.label }}{% if not field.field.required %} <span class="font-normal text-stone-400">(opcional)</span>{% endif %}
+  <span class="mt-1 block [&>input]:w-full [&>select]:w-full [&>input]:rounded-lg [&>select]:rounded-lg [&>input]:border [&>select]:border [&>input]:px-3 [&>select]:px-3 [&>input]:py-2 [&>select]:py-2 [&>input]:text-base [&>select]:text-base [&>select]:bg-white {% if field.errors %}[&>input]:border-red-400 [&>select]:border-red-400{% else %}[&>input]:border-stone-300 [&>select]:border-stone-300{% endif %}">{{ field }}</span>
   {% for error in field.errors %}<span class="mt-1 block text-sm font-normal text-red-600">{{ error }}</span>{% endfor %}
 </label>

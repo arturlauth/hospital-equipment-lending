@@ -155,3 +155,12 @@ def test_negative_value_is_rejected(warehouse, walkers):
         Equipment.objects.create(
             name="A", category=walkers, warehouse=warehouse, value=Decimal("-1.00")
         )
+
+
+@pytest.mark.django_db
+def test_only_available_filter_hides_lent_and_damaged_items(client, make_item):
+    free = make_item()
+    lend(make_item())
+    make_item(status=Equipment.Status.DAMAGED)
+    response = client.get(reverse("inventory:catalog"), {"disponiveis": "1"})
+    assert [e.pk for e in response.context["equipment_list"]] == [free.pk]

@@ -4,27 +4,41 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Empréstimo de equipamentos{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
-  <header class="border-b border-slate-200 bg-white">
-    <nav class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-      <a href="{% url 'inventory:catalog' %}" class="text-lg font-semibold text-sky-700">Equipamentos</a>
-      <div class="flex items-center gap-4 text-sm">
+<body class="min-h-screen bg-stone-50 text-stone-900 antialiased {% if user.is_authenticated %}pb-20 md:pb-0{% endif %}">
+  <a href="#conteudo" class="sr-only focus:not-sr-only focus:absolute focus:p-3">Pular para o conteúdo</a>
+  <header class="border-b border-stone-200 bg-white">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+      <a href="{% url 'inventory:catalog' %}" class="flex items-center gap-2 text-lg font-bold text-teal-700">
+        {% include "includes/icon.html" with name="heart" %}Equipamentos
+      </a>
+      <div class="flex items-center gap-5 text-sm font-bold">
         {% if user.is_authenticated %}
-          <a href="{% url 'lending:people' %}" class="text-slate-600 hover:text-sky-700">Pessoas</a>
+          <a href="{% url 'lending:people' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Pessoas</a>
           <form method="post" action="{% url 'staff:logout' %}">
             {% csrf_token %}
-            <button type="submit" class="text-slate-600 hover:text-sky-700">Sair</button>
+            <button type="submit" class="text-stone-600 hover:text-teal-700">Sair</button>
           </form>
         {% else %}
-          <a href="{% url 'staff:login' %}" class="rounded-lg bg-sky-700 px-3 py-1.5 font-medium text-white hover:bg-sky-800">Entrar</a>
+          <a href="{% url 'staff:login' %}" class="text-teal-700 hover:text-teal-800">Entrar</a>
         {% endif %}
       </div>
     </nav>
   </header>
-  <main class="mx-auto max-w-5xl px-4 py-6">
+  <main id="conteudo" class="mx-auto max-w-6xl px-4 py-6 md:py-10">
     {% block content %}{% endblock %}
   </main>
+  {% if user.is_authenticated %}
+    {# Staff tab bar on phones; more sections join as they ship. #}
+    <nav class="fixed inset-x-0 bottom-0 grid grid-cols-3 border-t border-stone-200 bg-white text-xs font-bold md:hidden">
+      <a href="{% url 'inventory:catalog' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="grid" %}Catálogo</a>
+      <a href="{% url 'lending:people' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="users" %}Pessoas</a>
+      <a href="{% url 'staff:home' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="home" %}Início</a>
+    </nav>
+  {% endif %}
 </body>
 </html>

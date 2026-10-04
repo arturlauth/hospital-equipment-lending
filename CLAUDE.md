@@ -80,5 +80,6 @@ stated elsewhere in this file, in the code, or in git history does not get a row
 
 | Date | Trap / mistake | Correct approach |
 |---|---|---|
+| 2026-10-03 | The on-`main` hook in `.claude/settings.json` blocks every Write, even to the scratchpad; a large mockup write was rejected and had to be resent | Create the feature branch before writing any file, including throwaway mockups |
 | 2026-10-03 | Weakening a `Meta.constraints` entry to watch its test fail changed nothing: the test DB is built from migrations, so the test stayed green | Mutate the constraint in the migration file and run with `--create-db`; then restore |
 | 2026-10-03 | `.env.example` drifted from `settings.py` (listed 2 of 7 variables) and the gap was logged as a debt instead of fixed; a fresh clone fails at startup with `KeyError` | Add the variable to `.env.example` in the same change that reads it; `config/test_env_example.py` now enforces this |
