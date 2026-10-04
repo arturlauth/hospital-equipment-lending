@@ -6,7 +6,7 @@ from django.db import IntegrityError
 from django.urls import reverse
 
 from hospitalequip.inventory.models import Category, Equipment, EquipmentImage, Warehouse
-from hospitalequip.lending.models import Loan, Person
+from hospitalequip.lending.models import Loan, LoanLog, Person
 from hospitalequip.lending.views import add_months
 from hospitalequip.staff import roles
 
@@ -261,7 +261,7 @@ def test_return_closes_the_loan_and_frees_the_equipment(client, attendant, open_
 def test_return_with_defect_marks_equipment_damaged(client, attendant, open_loan):
     client.post(
         reverse("lending:return", args=[open_loan.pk]),
-        {"return_date": "2026-09-15", "damaged": "on"},
+        {"return_date": "2026-09-15", "condition": "damaged"},
     )
     open_loan.equipment.refresh_from_db()
     assert open_loan.equipment.status == Equipment.Status.DAMAGED
@@ -309,7 +309,10 @@ def returned_loan(open_loan):
 
 
 def edit(client, loan, **data):
-    return client.post(reverse("lending:loan_edit", args=[loan.pk]), {"due_date": "", **data})
+    return client.post(
+        reverse("lending:loan_edit", args=[loan.pk]),
+        {"due_date": "", "reason": "Erro de digitação", **data},
+    )
 
 
 @pytest.mark.django_db
@@ -446,4 +449,123 @@ def test_loan_page_warns_when_open_loan_equipment_is_not_active(client, attendan
     open_loan.equipment.status = Equipment.Status.DAMAGED
     open_loan.equipment.save()
     page = client.get(reverse("lending:loan", args=[open_loan.pk])).content.decode()
-    assert "Equipamento danificado" in page
+    assert "Equipamento em manutenção" in page
+
+
+# Rule: every loan action is logged with who, when and the changed fields; only the Gestor sees it.
+
+
+@pytest.mark.django_db
+def test_lending_logs_who_lent(client, attendant, lendable):
+    equipment, person, guarantor = lendable
+    client.post(reverse("lending:lend", args=[equipment.pk]), lend_data(person, guarantor))
+    event = LoanLog.objects.get()
+    assert (event.action, event.changed_by) == (LoanLog.Action.LENT, attendant)
+
+
+@pytest.mark.django_db
+def test_return_logs_the_return_date_and_condition(client, attendant, open_loan):
+    client.post(
+        reverse("lending:return", args=[open_loan.pk]),
+        {"return_date": "2026-09-15", "condition": "damaged"},
+    )
+    event = open_loan.logs.get()
+    assert event.action == LoanLog.Action.RETURNED
+    assert event.changes == {"return_date": [None, "2026-09-15"]}
+    assert event.reason == "Com defeito"
+
+
+@pytest.mark.django_db
+def test_correction_logs_old_and_new_dates_with_its_reason(client, attendant, returned_loan):
+    edit(client, returned_loan, return_date="2026-09-12")
+    event = returned_loan.logs.get()
+    assert event.action == LoanLog.Action.EDITED
+    assert event.changes == {"return_date": ["2026-09-15", "2026-09-12"]}
+    assert event.reason == "Erro de digitação"
+
+
+@pytest.mark.django_db
+def test_undoing_a_return_is_logged_as_reopened(client, attendant, returned_loan):
+    edit(client, returned_loan, return_date="")
+    assert returned_loan.logs.get().action == LoanLog.Action.REOPENED
+
+
+@pytest.mark.django_db
+def test_correction_needs_a_reason(client, attendant, returned_loan):
+    response = edit(client, returned_loan, return_date="2026-09-12", reason="")
+    assert "reason" in response.context["form"].errors
+    returned_loan.refresh_from_db()
+    assert returned_loan.return_date == date(2026, 9, 15)
+
+
+@pytest.mark.django_db
+def test_saving_a_correction_without_changes_logs_nothing(client, attendant, returned_loan):
+    edit(client, returned_loan, return_date="2026-09-15")
+    assert not returned_loan.logs.exists()
+
+
+@pytest.mark.django_db
+def test_failed_return_logs_nothing(client, attendant, open_loan):
+    client.post(reverse("lending:return", args=[open_loan.pk]), {"return_date": "2999-01-01"})
+    assert not open_loan.logs.exists()
+
+
+@pytest.mark.django_db
+def test_loan_log_lives_only_under_registros(client, attendant, returned_loan):
+    edit(client, returned_loan, return_date="2026-09-12", reason="Motivo secreto")
+    loan_page = client.get(reverse("lending:loan", args=[returned_loan.pk])).content.decode()
+    assert "Motivo secreto" not in loan_page
+    assert client.get(reverse("lending:loan_log")).status_code == 403
+    client.force_login(User.objects.create_superuser("chefe", password="x"))
+    events = client.get(reverse("lending:loan_log"), {"q": "Pessoa Teste"}).context["events"]
+    assert [e.reason for e in events] == ["Motivo secreto"]
+
+
+# Rule: a return "com defeito" or "extraviado" sets the equipment status, logged.
+
+
+@pytest.mark.django_db
+def test_return_as_lost_marks_equipment_lost_and_logs_it(client, attendant, open_loan):
+    client.post(
+        reverse("lending:return", args=[open_loan.pk]),
+        {"return_date": "2026-09-15", "condition": "lost"},
+    )
+    equipment = open_loan.equipment
+    equipment.refresh_from_db()
+    change = equipment.status_logs.get()
+    assert equipment.status == Equipment.Status.LOST
+    assert (change.from_status, change.changed_by) == (Equipment.Status.ACTIVE, attendant)
+    assert change.effective_on == date(2026, 9, 15)
+
+
+@pytest.mark.django_db
+def test_returning_already_damaged_equipment_with_defect_logs_no_status_change(
+    client, attendant, open_loan
+):
+    open_loan.equipment.status = Equipment.Status.DAMAGED
+    open_loan.equipment.save()
+    response = client.post(
+        reverse("lending:return", args=[open_loan.pk]),
+        {"return_date": "2026-09-15", "condition": "damaged"},
+    )
+    assert response.status_code == 302
+    assert not open_loan.equipment.status_logs.exists()
+
+
+@pytest.mark.django_db
+def test_return_dated_before_the_last_status_change_is_rejected_whole(client, attendant, open_loan):
+    open_loan.equipment.status_logs.create(
+        from_status="damaged",
+        to_status="active",
+        effective_on=date(2026, 9, 20),
+        reason="Consertado",
+        changed_by=attendant,
+    )
+    response = client.post(
+        reverse("lending:return", args=[open_loan.pk]),
+        {"return_date": "2026-09-15", "condition": "lost"},
+    )
+    assert response.context["return_form"].non_field_errors()
+    open_loan.refresh_from_db()
+    assert open_loan.return_date is None
+    assert not open_loan.logs.exists()

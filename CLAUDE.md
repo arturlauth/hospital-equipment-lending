@@ -9,6 +9,8 @@ Lending system for hospital equipment. Monorepo, one product.
   (what was chosen, why, when to revisit). Business rules live in `docs/`. Code is documented by
   docstrings, not by docs. Reason: docs that describe code drift silently as the code changes;
   decisions and business rules change only by an explicit decision, which produces a new ADR.
+  Business lives in one file, `docs/business-model.md` (entities, situações, processes, rules) in
+  business words: no field/model names, form validation or admin mechanics.
 - **Lean docs.** Short files. No filler sections, no restating the code. An ADR follows the shape
   of `docs/adr/0004-*`: Decision in a few lines, options as a table, Revisit if, no persuasion.
   A detailed prompt is context, not a request for length; a seven-section draft was rejected.
@@ -85,6 +87,7 @@ stated elsewhere in this file, in the code, or in git history does not get a row
 
 | Date | Trap / mistake | Correct approach |
 |---|---|---|
+| 2026-10-04 | `subagent_type: "qa"` failed ("Agent type 'qa' not found") after `/clear`: agents load only at process start, not on clear | Restart Claude Code, or spawn `general-purpose` with `model: sonnet` told to read and follow `.claude/agents/qa.md` |
 | 2026-10-04 | New Tailwind classes did nothing in the browser (chip highlight missing) because `static/css/app.css` was stale; tests and the template were fine | After adding classes, rebuild once (`uv run tailwindcss -i assets/tailwind.css -o static/css/app.css --minify`) or keep `--watch` running before any visual check |
 | 2026-10-04 | `select_for_update()` with `select_related` on a nullable FK (e.g. `Loan.guarantor`) crashes on PostgreSQL: "FOR UPDATE cannot be applied to the nullable side of an outer join" | Lock only the row you change: `select_for_update(of=("self",))` |
 | 2026-10-03 | The on-`main` hook in `.claude/settings.json` blocks every Write, even to the scratchpad; a large mockup write was rejected and had to be resent | Create the feature branch before writing any file, including throwaway mockups |

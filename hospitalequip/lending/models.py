@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
 
@@ -107,3 +108,72 @@ class Loan(models.Model):
         return (
             self.return_date is None and self.due_date is not None and self.due_date < date.today()
         )
+
+
+FIELD_LABELS = {
+    "lent_date": "Emprestado em",
+    "due_date": "Devolução prevista",
+    "return_date": "Devolvido em",
+}
+
+
+class LoanLog(models.Model):
+    """One action on a loan: who did it, when, and the fields it changed as {field: [old, new]}.
+
+    Dates in `changes` are ISO strings. Written in the same transaction as the change.
+    """
+
+    class Action(models.TextChoices):
+        LENT = "lent", "Emprestado"
+        RETURNED = "returned", "Devolvido"
+        EDITED = "edited", "Editado"
+        REOPENED = "reopened", "Devolução desfeita"
+
+    loan = models.ForeignKey(
+        Loan, on_delete=models.PROTECT, related_name="logs", verbose_name="empréstimo"
+    )
+    action = models.CharField("ação", max_length=20, choices=Action.choices)
+    changes = models.JSONField("alterações", default=dict, blank=True)
+    reason = models.TextField("motivo", blank=True)
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", verbose_name="por"
+    )
+    created_at = models.DateTimeField("registrado em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "registro do empréstimo"
+        verbose_name_plural = "registros do empréstimo"
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self):
+        return f"{self.loan}: {self.get_action_display()}"
+
+    @classmethod
+    def record(cls, loan, action, by, old=None, reason=""):
+        """Log `action`; `old` maps field -> value before the change, unchanged ones are dropped."""
+        changes = {}
+        for field, before in (old or {}).items():
+            after = getattr(loan, field)
+            if before != after:
+                changes[field] = [_iso(before), _iso(after)]
+        return cls.objects.create(
+            loan=loan, action=action, changes=changes, reason=reason, changed_by=by
+        )
+
+    def change_rows(self):
+        """(label, old, new) per changed field, for display; an unknown field shows its key."""
+        return [
+            (FIELD_LABELS.get(field, field), _from_iso(old), _from_iso(new))
+            for field, (old, new) in self.changes.items()
+        ]
+
+
+def _iso(value):
+    return value.isoformat() if isinstance(value, date) else value
+
+
+def _from_iso(value):
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError):
+        return value

@@ -89,7 +89,14 @@ class ReturnForm(forms.Form):
     return_date = forms.DateField(
         label="Devolvido em", widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
     )
-    damaged = forms.BooleanField(label="Voltou com defeito", required=False)
+    OK, DAMAGED, LOST = "ok", "damaged", "lost"
+    condition = forms.ChoiceField(
+        label="Como voltou",
+        choices=[(OK, "Em ordem"), (DAMAGED, "Com defeito"), (LOST, "Extraviado")],
+        initial=OK,
+        required=False,
+        widget=forms.RadioSelect,
+    )
 
     def __init__(self, *args, loan, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,6 +110,9 @@ class ReturnForm(forms.Form):
             raise forms.ValidationError("A devolução não pode estar no futuro.")
         return return_date
 
+    def clean_condition(self):
+        return self.cleaned_data["condition"] or self.OK
+
 
 class LoanEditForm(forms.ModelForm):
     """Fix a loan's dates. Clearing the return date reopens the loan."""
@@ -115,6 +125,8 @@ class LoanEditForm(forms.ModelForm):
             "return_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         help_texts = {"return_date": "Deixe em branco para desfazer a devolução."}
+
+    reason = forms.CharField(label="Motivo da correção", widget=forms.Textarea(attrs={"rows": 2}))
 
     def clean_due_date(self):
         due_date = self.cleaned_data["due_date"]

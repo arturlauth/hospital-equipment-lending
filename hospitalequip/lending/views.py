@@ -6,11 +6,15 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from hospitalequip.inventory.services import get_lendable_equipment, mark_damaged
-from hospitalequip.staff.access import staff_required
+from hospitalequip.inventory.services import (
+    StatusChangeError,
+    change_status,
+    get_lendable_equipment,
+)
+from hospitalequip.staff.access import manager_required, staff_required
 
 from .forms import LoanEditForm, LoanForm, PersonForm, ReturnForm
-from .models import LOAN_TERM_MONTHS, Loan, Person
+from .models import LOAN_TERM_MONTHS, Loan, LoanLog, Person
 from .validators import only_digits
 
 
@@ -81,6 +85,7 @@ def lend(request, equipment_pk):
         try:
             with transaction.atomic():
                 loan = form.save()
+                LoanLog.record(loan, LoanLog.Action.LENT, request.user)
         except IntegrityError:  # another attendant lent it a moment ago
             form.add_error(None, "Este equipamento acabou de ser emprestado.")
         else:
@@ -92,12 +97,19 @@ def lend(request, equipment_pk):
 def loan_detail(request, pk):
     loan = get_object_or_404(Loan.objects.select_related("equipment", "person", "guarantor"), pk=pk)
     return_form = ReturnForm(initial={"return_date": date.today()}, loan=loan)
+    return render_loan(request, loan, return_form)
+
+
+def render_loan(request, loan, return_form):
     return render(request, "lending/loan_detail.html", {"loan": loan, "return_form": return_form})
+
+
+RETURN_STATUS = {ReturnForm.DAMAGED: "damaged", ReturnForm.LOST: "lost"}
 
 
 @staff_required
 def return_loan(request, pk):
-    """Close an open loan; "voltou com defeito" also takes the equipment out of lending."""
+    """Close an open loan; "com defeito" or "extraviado" also sets the equipment status."""
     if request.method != "POST":
         return redirect("lending:loan", pk=pk)
     with transaction.atomic():
@@ -110,12 +122,36 @@ def return_loan(request, pk):
         )
         form = ReturnForm(request.POST, loan=loan)
         if form.is_valid():
-            loan.return_date = form.cleaned_data["return_date"]
-            loan.save(update_fields=["return_date"])
-            if form.cleaned_data["damaged"]:
-                mark_damaged(loan.equipment_id)
-            return redirect("lending:loan", pk=loan.pk)
-    return render(request, "lending/loan_detail.html", {"loan": loan, "return_form": form})
+            condition = form.cleaned_data["condition"]
+            label = dict(form.fields["condition"].choices)[condition]
+            try:
+                with transaction.atomic():
+                    loan.return_date = form.cleaned_data["return_date"]
+                    loan.save(update_fields=["return_date"])
+                    LoanLog.record(
+                        loan,
+                        LoanLog.Action.RETURNED,
+                        request.user,
+                        old={"return_date": None},
+                        reason=label,
+                    )
+                    if (
+                        condition in RETURN_STATUS
+                        and loan.equipment.status != RETURN_STATUS[condition]
+                    ):
+                        change_status(
+                            loan.equipment_id,
+                            RETURN_STATUS[condition],
+                            by=request.user,
+                            on=loan.return_date,
+                            reason=f"Devolução {label.lower()} (empréstimo #{loan.pk})",
+                        )
+            except StatusChangeError as error:
+                loan.return_date = None
+                form.add_error(None, str(error))
+            else:
+                return redirect("lending:loan", pk=loan.pk)
+    return render_loan(request, loan, form)
 
 
 @staff_required
@@ -126,11 +162,18 @@ def loan_edit(request, pk):
         if request.method == "POST":
             loans = loans.select_for_update(of=("self",))
         loan = get_object_or_404(loans, pk=pk)
+        old = {"due_date": loan.due_date, "return_date": loan.return_date}
         form = LoanEditForm(request.POST or None, instance=loan)
         if request.method == "POST" and form.is_valid():
             try:
                 with transaction.atomic():
                     form.save()
+                    reopened = old["return_date"] and loan.return_date is None
+                    action = LoanLog.Action.REOPENED if reopened else LoanLog.Action.EDITED
+                    if any(getattr(loan, field) != value for field, value in old.items()):
+                        LoanLog.record(
+                            loan, action, request.user, old=old, reason=form.cleaned_data["reason"]
+                        )
             except IntegrityError:  # lent again between the check and the save
                 form.add_error("return_date", "O equipamento acabou de ser emprestado de novo.")
             else:
@@ -185,3 +228,21 @@ def loan_list(request):
         ],
     }
     return render(request, "lending/loan_list.html", context)
+
+
+LOG_LIMIT = 200
+
+
+@manager_required
+def loan_log(request):
+    """Registros, Empréstimos tab: every loan action, newest first, searchable by item or person."""
+    query = request.GET.get("q", "").strip()
+    events = LoanLog.objects.select_related("loan__equipment", "loan__person", "changed_by")
+    if query:
+        events = events.filter(
+            Q(loan__equipment__tag__icontains=query)
+            | Q(loan__equipment__name__icontains=query)
+            | Q(loan__person__name__icontains=query)
+        )
+    context = {"events": events[:LOG_LIMIT], "query": query, "tab": "loans"}
+    return render(request, "lending/loan_log.html", context)

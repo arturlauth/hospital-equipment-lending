@@ -15,4 +15,5 @@ urlpatterns = [
     path("emprestimos/<int:pk>/", views.loan_detail, name="loan"),
     path("emprestimos/<int:pk>/devolver/", views.return_loan, name="return"),
     path("emprestimos/<int:pk>/editar/", views.loan_edit, name="loan_edit"),
+    path("registros/emprestimos/", views.loan_log, name="loan_log"),
 ]

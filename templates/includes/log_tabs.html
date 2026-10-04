@@ -1,0 +1,12 @@
+<h1 class="text-2xl font-bold">Registros</h1>
+<p class="text-sm text-stone-600">Quem mudou o quê, quando e por quê. Só o Gestor vê.</p>
+<nav class="mt-4 flex gap-2 text-sm font-bold" aria-label="Registros">
+  <a href="{% url 'inventory:status_log' %}" {% if tab == "status" %}aria-current="page"{% endif %}
+     class="rounded-full px-4 py-2 ring-1 {% if tab == 'status' %}bg-teal-700 text-white ring-teal-700{% else %}bg-white text-stone-700 ring-stone-300 hover:ring-teal-600{% endif %}">Situação</a>
+  <a href="{% url 'lending:loan_log' %}" {% if tab == "loans" %}aria-current="page"{% endif %}
+     class="rounded-full px-4 py-2 ring-1 {% if tab == 'loans' %}bg-teal-700 text-white ring-teal-700{% else %}bg-white text-stone-700 ring-stone-300 hover:ring-teal-600{% endif %}">Empréstimos</a>
+</nav>
+<form method="get" class="mt-3">
+  <input type="search" name="q" value="{{ query }}" placeholder="{{ placeholder }}" aria-label="Buscar"
+         class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base sm:max-w-sm">
+</form>
