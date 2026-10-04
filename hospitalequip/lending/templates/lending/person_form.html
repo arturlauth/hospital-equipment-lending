@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{% if person %}Editar {{ person.name }}{% else %}Cadastrar pessoa{% endif %}{% endblock %}
+
+{% block content %}
+  <h1 class="mb-5 text-2xl font-semibold">{% if person %}Editar {{ person.name }}{% else %}Cadastrar pessoa{% endif %}</h1>
+  <form method="post" class="space-y-6" novalidate>
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>{% endfor %}
+    <fieldset class="grid gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:grid-cols-2">
+      <legend class="px-1 text-sm font-semibold text-slate-500">Dados pessoais</legend>
+      {% include "includes/field.html" with field=form.name class="sm:col-span-2" %}
+      {% include "includes/field.html" with field=form.cpf %}
+      {% include "includes/field.html" with field=form.rg %}
+      {% include "includes/field.html" with field=form.birth_date %}
+      {% include "includes/field.html" with field=form.phone %}
+      {% include "includes/field.html" with field=form.email class="sm:col-span-2" %}
+    </fieldset>
+    <fieldset class="grid gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:grid-cols-6">
+      <legend class="px-1 text-sm font-semibold text-slate-500">Endereço</legend>
+      {% include "includes/field.html" with field=form.cep class="sm:col-span-2" %}
+      {% include "includes/field.html" with field=form.street class="sm:col-span-4" %}
+      {% include "includes/field.html" with field=form.number class="sm:col-span-2" %}
+      {% include "includes/field.html" with field=form.complement class="sm:col-span-4" %}
+      {% include "includes/field.html" with field=form.neighborhood class="sm:col-span-2" %}
+      {% include "includes/field.html" with field=form.city class="sm:col-span-3" %}
+      {% include "includes/field.html" with field=form.state class="sm:col-span-1" %}
+    </fieldset>
+    <div class="flex gap-3">
+      <button type="submit" class="flex-1 rounded-lg bg-sky-700 py-2.5 font-medium text-white hover:bg-sky-800 sm:flex-none sm:px-8">Salvar</button>
+      <a href="{% if person %}{% url 'lending:person' person.pk %}{% else %}{% url 'lending:people' %}{% endif %}" class="rounded-lg px-4 py-2.5 text-slate-600 hover:bg-slate-100">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

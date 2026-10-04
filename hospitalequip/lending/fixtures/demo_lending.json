@@ -4,10 +4,18 @@
     "pk": 1,
     "fields": {
       "name": "Maria Exemplo",
-      "cpf": "00000000001",
+      "cpf": "12345678909",
       "birth_date": "1950-03-12",
       "phone": "(37) 90000-0001",
-      "email": ""
+      "email": "",
+      "rg": "",
+      "street": "Rua das Flores",
+      "number": "100",
+      "complement": "",
+      "neighborhood": "Centro",
+      "city": "Formiga",
+      "state": "MG",
+      "cep": "35570000"
     }
   },
   {
@@ -15,10 +23,18 @@
     "pk": 2,
     "fields": {
       "name": "João Fictício",
-      "cpf": "00000000002",
+      "cpf": "98765432100",
       "birth_date": "1962-07-30",
       "phone": "(37) 90000-0002",
-      "email": "joao@example.com"
+      "email": "joao@example.com",
+      "rg": "",
+      "street": "Rua Exemplo",
+      "number": "101",
+      "complement": "",
+      "neighborhood": "Centro",
+      "city": "Formiga",
+      "state": "MG",
+      "cep": "35570000"
     }
   },
   {
@@ -26,10 +42,18 @@
     "pk": 3,
     "fields": {
       "name": "Ana Teste",
-      "cpf": "00000000003",
+      "cpf": "11144477735",
       "birth_date": "1988-11-05",
       "phone": "(37) 90000-0003",
-      "email": "ana@example.com"
+      "email": "ana@example.com",
+      "rg": "",
+      "street": "Avenida Central",
+      "number": "102",
+      "complement": "",
+      "neighborhood": "Centro",
+      "city": "Formiga",
+      "state": "MG",
+      "cep": "35570000"
     }
   },
   {
@@ -37,10 +61,18 @@
     "pk": 4,
     "fields": {
       "name": "Pedro Modelo",
-      "cpf": "00000000004",
+      "cpf": "52998224725",
       "birth_date": "1945-01-20",
       "phone": "(37) 90000-0004",
-      "email": ""
+      "email": "",
+      "rg": "",
+      "street": "Rua do Teste",
+      "number": "103",
+      "complement": "",
+      "neighborhood": "Centro",
+      "city": "Formiga",
+      "state": "MG",
+      "cep": "35570000"
     }
   },
   {

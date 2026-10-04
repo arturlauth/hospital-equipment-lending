@@ -2,3 +2,5 @@
 
 ATTENDANT = "Atendente"
 MANAGER = "Gestor"
+
+ALL = [ATTENDANT, MANAGER]
