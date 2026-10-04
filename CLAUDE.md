@@ -33,6 +33,11 @@ Lending system for hospital equipment. Monorepo, one product.
   `checks` CI job.
 - **CLAUDE.md-only edits never get their own branch or PR.** Leave them uncommitted and carry them
   onto the next feature branch, where they ship with that PR.
+- **Visual changes get browser QA before review.** After changing what a page shows or how it reacts
+  (buttons, chips, layout, HTMX swaps), Claude spawns the `qa` agent (`.claude/agents/qa.md`,
+  Sonnet) and loops fix → QA until it passes, then stops for Artur. QA logs in with the local
+  `QA_USERNAME`/`QA_PASSWORD` test account from `.env`. Give QA numbered expectations with exact
+  steps (URL, what to click, what must be true); re-runs list only the failed items.
 - **"Merged" alone means clean up, without asking:** `git switch main`, `git pull`, then delete the
   merged branch locally (`git branch -d`) and on the remote (`git push origin --delete`).
 
@@ -80,6 +85,7 @@ stated elsewhere in this file, in the code, or in git history does not get a row
 
 | Date | Trap / mistake | Correct approach |
 |---|---|---|
+| 2026-10-04 | New Tailwind classes did nothing in the browser (chip highlight missing) because `static/css/app.css` was stale; tests and the template were fine | After adding classes, rebuild once (`uv run tailwindcss -i assets/tailwind.css -o static/css/app.css --minify`) or keep `--watch` running before any visual check |
 | 2026-10-04 | `select_for_update()` with `select_related` on a nullable FK (e.g. `Loan.guarantor`) crashes on PostgreSQL: "FOR UPDATE cannot be applied to the nullable side of an outer join" | Lock only the row you change: `select_for_update(of=("self",))` |
 | 2026-10-03 | The on-`main` hook in `.claude/settings.json` blocks every Write, even to the scratchpad; a large mockup write was rejected and had to be resent | Create the feature branch before writing any file, including throwaway mockups |
 | 2026-10-03 | Weakening a `Meta.constraints` entry to watch its test fail changed nothing: the test DB is built from migrations, so the test stayed green | Mutate the constraint in the migration file and run with `--create-db`; then restore |

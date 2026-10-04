@@ -32,7 +32,7 @@ def equipment_detail(request, pk):
     )
     context = {"equipment": equipment, "staff": is_staff_member(request.user)}
     if context["staff"]:
-        context["open_loan"] = (
-            equipment.loans.filter(return_date__isnull=True).select_related("person").first()
-        )
+        loans = list(equipment.loans.select_related("person").order_by("-lent_date", "-pk"))
+        context["loans"] = loans
+        context["open_loan"] = next((loan for loan in loans if loan.return_date is None), None)
     return render(request, "inventory/equipment_detail.html", context)

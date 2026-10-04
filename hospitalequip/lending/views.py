@@ -1,5 +1,6 @@
 import calendar
 from datetime import date
+from urllib.parse import urlencode
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -8,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from hospitalequip.inventory.services import get_lendable_equipment, mark_damaged
 from hospitalequip.staff.access import staff_required
 
-from .forms import LoanForm, PersonForm, ReturnForm
+from .forms import LoanEditForm, LoanForm, PersonForm, ReturnForm
 from .models import LOAN_TERM_MONTHS, Loan, Person
 from .validators import only_digits
 
@@ -115,3 +116,72 @@ def return_loan(request, pk):
                 mark_damaged(loan.equipment_id)
             return redirect("lending:loan", pk=loan.pk)
     return render(request, "lending/loan_detail.html", {"loan": loan, "return_form": form})
+
+
+@staff_required
+def loan_edit(request, pk):
+    """Correct a loan's dates; an empty return date undoes the return."""
+    with transaction.atomic():
+        loans = Loan.objects.select_related("equipment", "person")
+        if request.method == "POST":
+            loans = loans.select_for_update(of=("self",))
+        loan = get_object_or_404(loans, pk=pk)
+        form = LoanEditForm(request.POST or None, instance=loan)
+        if request.method == "POST" and form.is_valid():
+            try:
+                with transaction.atomic():
+                    form.save()
+            except IntegrityError:  # lent again between the check and the save
+                form.add_error("return_date", "O equipamento acabou de ser emprestado de novo.")
+            else:
+                return redirect("lending:loan", pk=loan.pk)
+    return render(request, "lending/loan_form.html", {"form": form, "loan": loan})
+
+
+def overdue_loans():
+    """Same rule as Loan.is_overdue, as a query."""
+    return Q(return_date__isnull=True, due_date__lt=date.today())
+
+
+LOAN_FILTERS = {
+    "abertos": ("Em aberto", lambda: Q(return_date__isnull=True)),
+    "atrasados": ("Atrasados", overdue_loans),
+    "devolvidos": ("Devolvidos", lambda: Q(return_date__isnull=False)),
+}
+
+
+@staff_required
+def loan_list(request):
+    """Global loan history, filtered by status and by equipment name or tag."""
+    status = request.GET.get("situacao", "")
+    equipment = request.GET.get("equipamento", "").strip()
+    loans = Loan.objects.select_related("equipment", "person").order_by("-lent_date", "-pk")
+    if status in LOAN_FILTERS:
+        loans = loans.filter(LOAN_FILTERS[status][1]())
+    if equipment:
+        loans = loans.filter(
+            Q(equipment__name__icontains=equipment) | Q(equipment__tag__icontains=equipment)
+        )
+    context = {
+        "loans": loans,
+        "status": status,
+        "equipment": equipment,
+        "chips": [  # tapping the active chip again clears it
+            {
+                "label": label,
+                "active": key == status,
+                "query": urlencode(
+                    {
+                        k: v
+                        for k, v in {
+                            "situacao": "" if key == status else key,
+                            "equipamento": equipment,
+                        }.items()
+                        if v
+                    }
+                ),
+            }
+            for key, (label, _) in LOAN_FILTERS.items()
+        ],
+    }
+    return render(request, "lending/loan_list.html", context)

@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import models
 from django.db.models import F, Q
 
@@ -98,3 +100,10 @@ class Loan(models.Model):
 
     def __str__(self):
         return f"{self.equipment} → {self.person}"
+
+    @property
+    def is_overdue(self):
+        """Still open and past its due date; due today is not late yet."""
+        return (
+            self.return_date is None and self.due_date is not None and self.due_date < date.today()
+        )

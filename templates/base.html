@@ -19,6 +19,7 @@
       </a>
       <div class="flex items-center gap-5 text-sm font-bold">
         {% if user.is_authenticated %}
+          <a href="{% url 'lending:loans' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Histórico</a>
           <a href="{% url 'lending:people' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Pessoas</a>
           <form method="post" action="{% url 'staff:logout' %}">
             {% csrf_token %}
@@ -35,8 +36,9 @@
   </main>
   {% if user.is_authenticated %}
     {# Staff tab bar on phones; more sections join as they ship. #}
-    <nav class="fixed inset-x-0 bottom-0 grid grid-cols-3 border-t border-stone-200 bg-white text-xs font-bold md:hidden">
+    <nav class="fixed inset-x-0 bottom-0 grid grid-cols-4 border-t border-stone-200 bg-white text-xs font-bold md:hidden">
       <a href="{% url 'inventory:catalog' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="grid" %}Catálogo</a>
+      <a href="{% url 'lending:loans' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="history" %}Histórico</a>
       <a href="{% url 'lending:people' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="users" %}Pessoas</a>
       <a href="{% url 'staff:home' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="home" %}Início</a>
     </nav>

@@ -36,6 +36,17 @@
           {% else %}
             <p class="mt-1 text-stone-600">Fora de uso ({{ equipment.get_status_display|lower }}).</p>
           {% endif %}
+          <p class="mt-5 text-xs font-bold uppercase tracking-wider text-stone-500">Histórico</p>
+          <ul class="mt-1 divide-y divide-stone-100 text-sm">
+            {% for loan in loans %}
+              <li><a href="{% url 'lending:loan' loan.pk %}" class="flex items-center justify-between gap-3 py-2.5 hover:text-teal-700">
+                <span><b>{{ loan.person.name }}</b><br><span class="text-stone-500">{{ loan.lent_date|date:"d/m/Y" }} → {{ loan.return_date|date:"d/m/Y"|default:"…" }}</span></span>
+                {% include "includes/loan_status.html" %}
+              </a></li>
+            {% empty %}
+              <li class="py-2.5 text-stone-500">Nunca foi emprestado.</li>
+            {% endfor %}
+          </ul>
         </div>
       {% endif %}
       {% if equipment.description %}
