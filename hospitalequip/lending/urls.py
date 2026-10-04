@@ -12,4 +12,5 @@ urlpatterns = [
     path("pessoas/escolher/", views.person_picker, name="person_picker"),
     path("emprestar/<int:equipment_pk>/", views.lend, name="lend"),
     path("emprestimos/<int:pk>/", views.loan_detail, name="loan"),
+    path("emprestimos/<int:pk>/devolver/", views.return_loan, name="return"),
 ]

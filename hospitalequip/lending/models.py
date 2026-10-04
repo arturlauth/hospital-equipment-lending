@@ -58,14 +58,14 @@ class Loan(models.Model):
         Person,
         on_delete=models.PROTECT,
         related_name="loans",
-        verbose_name="pessoa",
+        verbose_name="beneficiário",
     )
-    # Nullable only for loans recorded before guarantors existed; the lend form requires one.
+    # The "solidário" (UI name). Nullable only for loans recorded before guarantors existed; the lend form requires one.
     guarantor = models.ForeignKey(
         Person,
         on_delete=models.PROTECT,
         related_name="guaranteed_loans",
-        verbose_name="fiador",
+        verbose_name="solidário",
         null=True,
         blank=True,
     )

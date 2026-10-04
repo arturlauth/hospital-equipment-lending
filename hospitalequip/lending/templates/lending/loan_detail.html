@@ -14,12 +14,23 @@
     {% endif %}
     <dl class="mt-5 divide-y divide-stone-200 rounded-2xl bg-white px-4 ring-1 ring-stone-200">
       <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Equipamento</dt><dd class="text-right font-bold"><a href="{% url 'inventory:equipment' loan.equipment.pk %}" class="hover:text-teal-700">{{ loan.equipment.name }}</a> <span class="font-normal text-stone-500">{{ loan.equipment.tag }}</span></dd></div>
-      <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Quem recebe</dt><dd class="text-right font-bold"><a href="{% url 'lending:person' loan.person.pk %}" class="hover:text-teal-700">{{ loan.person.name }}</a></dd></div>
-      <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Fiador</dt><dd class="text-right font-bold">{% if loan.guarantor %}<a href="{% url 'lending:person' loan.guarantor.pk %}" class="hover:text-teal-700">{{ loan.guarantor.name }}</a>{% else %}—{% endif %}</dd></div>
+      <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Beneficiário</dt><dd class="text-right font-bold"><a href="{% url 'lending:person' loan.person.pk %}" class="hover:text-teal-700">{{ loan.person.name }}</a></dd></div>
+      <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Solidário</dt><dd class="text-right font-bold">{% if loan.guarantor %}<a href="{% url 'lending:person' loan.guarantor.pk %}" class="hover:text-teal-700">{{ loan.guarantor.name }}</a>{% else %}—{% endif %}</dd></div>
       <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Emprestado em</dt><dd class="font-bold">{{ loan.lent_date|date:"d/m/Y" }}</dd></div>
       <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Devolução prevista</dt><dd class="font-bold">{{ loan.due_date|date:"d/m/Y"|default:"—" }}</dd></div>
       {% if loan.return_date %}<div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Devolvido em</dt><dd class="font-bold">{{ loan.return_date|date:"d/m/Y" }}</dd></div>{% endif %}
     </dl>
+    {% if not loan.return_date %}
+      <details class="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200" {% if return_form.is_bound %}open{% endif %}>
+        <summary class="cursor-pointer font-bold text-teal-700">Registrar devolução</summary>
+        <form method="post" action="{% url 'lending:return' loan.pk %}" class="mt-4 space-y-4" novalidate>
+          {% csrf_token %}
+          {% include "includes/field.html" with field=return_form.return_date %}
+          <label class="flex items-center gap-2"><span class="[&>input]:size-5">{{ return_form.damaged }}</span> Voltou com defeito</label>
+          <button type="submit" class="w-full rounded-full bg-teal-700 py-3 font-bold text-white hover:bg-teal-800">Confirmar devolução</button>
+        </form>
+      </details>
+    {% endif %}
     <a href="{% url 'inventory:catalog' %}" class="mt-5 flex min-h-12 items-center justify-center rounded-full border border-stone-300 font-bold hover:bg-white">Voltar ao catálogo</a>
   </div>
 {% endblock %}

@@ -114,6 +114,32 @@ def test_equipment_page_shows_availability(client, make_item):
     assert response.context["equipment"].lent_until == date(2027, 3, 1)
 
 
+# Rule: the return month shows only on the equipment page; the pickup place only when it is free.
+
+
+@pytest.mark.django_db
+def test_catalog_says_unavailable_without_the_return_month(client, make_item):
+    lend(make_item(), due_date=date(2027, 3, 1))
+    page = client.get(reverse("inventory:catalog")).content.decode()
+    assert "Indisponível" in page
+    assert "Volta em" not in page
+
+
+@pytest.mark.django_db
+def test_equipment_page_shows_return_month_and_hides_pickup_place_when_lent(client, make_item):
+    item = make_item()
+    lend(item, due_date=date(2027, 3, 1))
+    page = client.get(reverse("inventory:equipment", args=[item.pk])).content.decode()
+    assert "Volta em" in page
+    assert "Depósito teste" not in page
+
+
+@pytest.mark.django_db
+def test_equipment_page_shows_pickup_place_when_available(client, make_item):
+    page = client.get(reverse("inventory:equipment", args=[make_item().pk])).content.decode()
+    assert "Depósito teste" in page
+
+
 # Rule: the asset tag is the category code + the next number in that category, assigned once.
 
 

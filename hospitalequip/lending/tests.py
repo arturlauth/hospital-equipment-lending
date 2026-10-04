@@ -137,7 +137,7 @@ def lendable(open_loan):
         warehouse=open_loan.equipment.warehouse,
     )
     guarantor = Person.objects.create(
-        name="Fiador Teste", cpf="52998224725", birth_date=date(1970, 1, 1), phone="0"
+        name="Solidário Teste", cpf="52998224725", birth_date=date(1970, 1, 1), phone="0"
     )
     return equipment, open_loan.person, guarantor
 
@@ -244,3 +244,55 @@ def test_person_picker_leaves_out_the_one_chosen_in_the_other_box(client, attend
         reverse("lending:person_picker"), {"campo": "guarantor", "q": "teste", "person": person.pk}
     )
     assert list(response.context["results"]) == [guarantor]
+
+
+# Rule: returning closes the loan once; "voltou com defeito" takes the equipment out of lending.
+
+
+@pytest.mark.django_db
+def test_return_closes_the_loan_and_frees_the_equipment(client, attendant, open_loan):
+    client.post(reverse("lending:return", args=[open_loan.pk]), {"return_date": "2026-09-15"})
+    open_loan.refresh_from_db()
+    assert open_loan.return_date == date(2026, 9, 15)
+    assert open_loan.equipment.status == Equipment.Status.ACTIVE
+
+
+@pytest.mark.django_db
+def test_return_with_defect_marks_equipment_damaged(client, attendant, open_loan):
+    client.post(
+        reverse("lending:return", args=[open_loan.pk]),
+        {"return_date": "2026-09-15", "damaged": "on"},
+    )
+    open_loan.equipment.refresh_from_db()
+    assert open_loan.equipment.status == Equipment.Status.DAMAGED
+
+
+@pytest.mark.django_db
+def test_loan_cannot_be_returned_twice(client, attendant, open_loan):
+    url = reverse("lending:return", args=[open_loan.pk])
+    client.post(url, {"return_date": "2026-09-15"})
+    assert client.post(url, {"return_date": "2026-09-20"}).status_code == 404
+    open_loan.refresh_from_db()
+    assert open_loan.return_date == date(2026, 9, 15)
+
+
+@pytest.mark.parametrize("return_date", ["2026-08-31", "2999-01-01"])
+@pytest.mark.django_db
+def test_return_date_must_be_between_lent_date_and_today(client, attendant, open_loan, return_date):
+    response = client.post(
+        reverse("lending:return", args=[open_loan.pk]), {"return_date": return_date}
+    )
+    assert "return_date" in response.context["return_form"].errors
+    open_loan.refresh_from_db()
+    assert open_loan.return_date is None
+
+
+@pytest.mark.django_db
+def test_returned_equipment_can_be_lent_again(client, attendant, lendable, open_loan):
+    _, person, guarantor = lendable
+    client.post(reverse("lending:return", args=[open_loan.pk]), {"return_date": "2026-09-15"})
+    response = client.post(
+        reverse("lending:lend", args=[open_loan.equipment.pk]), lend_data(person, guarantor)
+    )
+    assert response.status_code == 302
+    assert open_loan.equipment.loans.filter(return_date__isnull=True).count() == 1
