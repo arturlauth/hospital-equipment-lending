@@ -81,6 +81,7 @@
     "fields": {
       "equipment": 1,
       "person": 1,
+      "guarantor": 2,
       "lent_date": "2026-09-05",
       "due_date": "2026-10-05",
       "return_date": null
@@ -92,6 +93,7 @@
     "fields": {
       "equipment": 3,
       "person": 4,
+      "guarantor": 1,
       "lent_date": "2026-09-10",
       "due_date": null,
       "return_date": null
@@ -103,6 +105,7 @@
     "fields": {
       "equipment": 5,
       "person": 2,
+      "guarantor": 3,
       "lent_date": "2026-08-01",
       "due_date": "2026-08-31",
       "return_date": "2026-08-28"
@@ -114,6 +117,7 @@
     "fields": {
       "equipment": 6,
       "person": 3,
+      "guarantor": 4,
       "lent_date": "2026-09-20",
       "due_date": "2026-12-20",
       "return_date": null

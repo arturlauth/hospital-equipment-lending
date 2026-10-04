@@ -1,6 +1,8 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 
+from hospitalequip.staff.access import is_staff_member
+
 from .models import Equipment
 
 
@@ -28,4 +30,9 @@ def equipment_detail(request, pk):
         .prefetch_related("images", "specs"),
         pk=pk,
     )
-    return render(request, "inventory/equipment_detail.html", {"equipment": equipment})
+    context = {"equipment": equipment, "staff": is_staff_member(request.user)}
+    if context["staff"]:
+        context["open_loan"] = (
+            equipment.loans.filter(return_date__isnull=True).select_related("person").first()
+        )
+    return render(request, "inventory/equipment_detail.html", context)

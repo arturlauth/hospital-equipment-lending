@@ -1,0 +1,31 @@
+{% if results is not None %}
+  {# Search mode: only the result list, swapped under the input so it keeps focus. #}
+  <ul class="mt-1 divide-y divide-stone-100 rounded-xl bg-white text-sm ring-1 ring-stone-200">
+    {% for person in results %}
+      <li><button type="button" class="flex w-full justify-between gap-3 p-3 text-left hover:bg-teal-50"
+          hx-get="{% url 'lending:person_picker' %}?campo={{ field }}&rotulo={{ label|urlencode }}&id={{ person.pk }}" hx-target="#picker-{{ field }}" hx-swap="outerHTML">
+        <b>{{ person.name }}</b><span class="text-stone-500">{{ person.cpf_display }}</span></button></li>
+    {% empty %}
+      <li class="p-3 text-stone-500">Ninguém encontrado para “{{ query }}”.</li>
+    {% endfor %}
+    <li><a href="{% url 'lending:person_new' %}" target="_blank" class="block p-3 font-bold text-teal-700">+ Cadastrar nova pessoa</a></li>
+  </ul>
+{% else %}
+  <div id="picker-{{ field }}">
+    <p class="text-xs font-bold uppercase tracking-wider text-stone-500">{{ label }}</p>
+    {% if chosen %}
+      <div class="mt-1 flex items-center justify-between gap-3 rounded-xl bg-white p-3 ring-1 ring-stone-200">
+        <span><b>{{ chosen.name }}</b> <span class="text-sm text-stone-500">{{ chosen.cpf_display }}</span></span>
+        <input type="hidden" name="{{ field }}" value="{{ chosen.pk }}">
+        <button type="button" class="font-bold text-teal-700" hx-get="{% url 'lending:person_picker' %}?campo={{ field }}&rotulo={{ label|urlencode }}" hx-target="#picker-{{ field }}" hx-swap="outerHTML">Trocar</button>
+      </div>
+    {% else %}
+      <input type="search" name="q" placeholder="Nome ou CPF" autocomplete="off" aria-label="{{ label }}"
+             class="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-base"
+             hx-get="{% url 'lending:person_picker' %}" hx-trigger="input changed delay:250ms, search"
+             hx-vals='{"campo": "{{ field }}", "rotulo": "{{ label }}"}' hx-include="[name=person],[name=guarantor]"
+             hx-target="#results-{{ field }}">
+      <div id="results-{{ field }}"></div>
+    {% endif %}
+  </div>
+{% endif %}

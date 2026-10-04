@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from hospitalequip.inventory.models import Category, Equipment, Warehouse
 from hospitalequip.lending.models import Loan, Person
+from hospitalequip.lending.views import add_months
 from hospitalequip.staff import roles
 
 
@@ -122,3 +123,124 @@ def test_people_pages_send_anonymous_visitors_to_login(client):
 def test_logged_in_user_without_a_staff_role_is_forbidden(client):
     client.force_login(User.objects.create_user("sem-papel", password="x"))
     assert client.get(reverse("lending:people")).status_code == 403
+
+
+# --- Lending -------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def lendable(open_loan):
+    """A second, free wheelchair plus a guarantor; open_loan's equipment stays lent."""
+    equipment = Equipment.objects.create(
+        name="Andador",
+        category=open_loan.equipment.category,
+        warehouse=open_loan.equipment.warehouse,
+    )
+    guarantor = Person.objects.create(
+        name="Fiador Teste", cpf="52998224725", birth_date=date(1970, 1, 1), phone="0"
+    )
+    return equipment, open_loan.person, guarantor
+
+
+def lend_data(person, guarantor, **overrides):
+    data = {
+        "person": person.pk,
+        "guarantor": guarantor.pk,
+        "lent_date": "2026-10-03",
+        "due_date": "2027-04-03",
+    }
+    return data | overrides
+
+
+# Rule: a loan has a borrower and a different guarantor, on equipment that is free and active.
+
+
+@pytest.mark.django_db
+def test_attendant_lends_free_equipment_and_lands_on_the_loan(client, attendant, lendable):
+    equipment, person, guarantor = lendable
+    response = client.post(
+        reverse("lending:lend", args=[equipment.pk]), lend_data(person, guarantor)
+    )
+    loan = Loan.objects.get(equipment=equipment)
+    assert response.url == reverse("lending:loan", args=[loan.pk])
+    assert (loan.person, loan.guarantor, loan.return_date) == (person, guarantor, None)
+
+
+@pytest.mark.django_db
+def test_guarantor_cannot_be_the_borrower(client, attendant, lendable):
+    equipment, person, _ = lendable
+    response = client.post(reverse("lending:lend", args=[equipment.pk]), lend_data(person, person))
+    assert "guarantor" in response.context["form"].errors
+    assert not Loan.objects.filter(equipment=equipment).exists()
+
+
+@pytest.mark.django_db
+def test_database_rejects_guarantor_equal_to_borrower(open_loan):
+    open_loan.guarantor = open_loan.person
+    with pytest.raises(IntegrityError):
+        open_loan.save()
+
+
+@pytest.mark.django_db
+def test_loan_needs_a_guarantor(client, attendant, lendable):
+    equipment, person, guarantor = lendable
+    response = client.post(
+        reverse("lending:lend", args=[equipment.pk]),
+        lend_data(person, guarantor) | {"guarantor": ""},
+    )
+    assert "guarantor" in response.context["form"].errors
+
+
+@pytest.mark.django_db
+def test_due_date_cannot_be_before_lent_date(client, attendant, lendable):
+    equipment, person, guarantor = lendable
+    response = client.post(
+        reverse("lending:lend", args=[equipment.pk]),
+        lend_data(person, guarantor, due_date="2026-10-02"),
+    )
+    assert "due_date" in response.context["form"].errors
+
+
+@pytest.mark.django_db
+def test_equipment_already_lent_cannot_be_lent_again(client, attendant, lendable, open_loan):
+    _, person, guarantor = lendable
+    response = client.post(
+        reverse("lending:lend", args=[open_loan.equipment.pk]), lend_data(person, guarantor)
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_damaged_equipment_cannot_be_lent(client, attendant, lendable):
+    equipment, person, guarantor = lendable
+    equipment.status = Equipment.Status.DAMAGED
+    equipment.save()
+    response = client.post(
+        reverse("lending:lend", args=[equipment.pk]), lend_data(person, guarantor)
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_lend_form_suggests_due_date_six_months_ahead(client, attendant, lendable):
+    response = client.get(reverse("lending:lend", args=[lendable[0].pk]))
+    form = response.context["form"]
+    lent, due = form.initial["lent_date"], form.initial["due_date"]
+    assert (due.year * 12 + due.month) - (lent.year * 12 + lent.month) == 6
+
+
+@pytest.mark.parametrize(
+    ("start", "expected"),
+    [(date(2026, 8, 31), date(2027, 2, 28)), (date(2026, 10, 3), date(2027, 4, 3))],
+)
+def test_add_months_clamps_to_the_last_day_of_the_month(start, expected):
+    assert add_months(start, 6) == expected
+
+
+@pytest.mark.django_db
+def test_person_picker_leaves_out_the_one_chosen_in_the_other_box(client, attendant, lendable):
+    _, person, guarantor = lendable
+    response = client.get(
+        reverse("lending:person_picker"), {"campo": "guarantor", "q": "teste", "person": person.pk}
+    )
+    assert list(response.context["results"]) == [guarantor]

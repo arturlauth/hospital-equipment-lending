@@ -9,4 +9,7 @@ urlpatterns = [
     path("pessoas/nova/", views.person_form, name="person_new"),
     path("pessoas/<int:pk>/", views.person_detail, name="person"),
     path("pessoas/<int:pk>/editar/", views.person_form, name="person_edit"),
+    path("pessoas/escolher/", views.person_picker, name="person_picker"),
+    path("emprestar/<int:equipment_pk>/", views.lend, name="lend"),
+    path("emprestimos/<int:pk>/", views.loan_detail, name="loan"),
 ]

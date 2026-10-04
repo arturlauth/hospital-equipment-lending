@@ -3,6 +3,8 @@ from django.db.models import F, Q
 
 from .validators import only_digits, validate_cep, validate_cpf
 
+LOAN_TERM_MONTHS = 6  # suggested time until the due date; staff can change it per loan
+
 STATES = [
     (uf, uf)
     for uf in "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split()
@@ -58,6 +60,15 @@ class Loan(models.Model):
         related_name="loans",
         verbose_name="pessoa",
     )
+    # Nullable only for loans recorded before guarantors existed; the lend form requires one.
+    guarantor = models.ForeignKey(
+        Person,
+        on_delete=models.PROTECT,
+        related_name="guaranteed_loans",
+        verbose_name="fiador",
+        null=True,
+        blank=True,
+    )
     lent_date = models.DateField("emprestado em")
     due_date = models.DateField("devolução prevista", null=True, blank=True)
     return_date = models.DateField("devolvido em", null=True, blank=True)
@@ -73,6 +84,10 @@ class Loan(models.Model):
             models.CheckConstraint(
                 condition=Q(return_date__isnull=True) | Q(return_date__gte=F("lent_date")),
                 name="loan_return_not_before_lent",
+            ),
+            models.CheckConstraint(
+                condition=~Q(guarantor=F("person")),
+                name="loan_guarantor_is_not_borrower",
             ),
             models.UniqueConstraint(
                 fields=["equipment"],

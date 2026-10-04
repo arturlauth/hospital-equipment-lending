@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Emprestar {{ equipment.name }}{% endblock %}
+
+{% block content %}
+  <div class="mx-auto max-w-lg">
+    <a href="{% url 'inventory:equipment' equipment.pk %}" class="text-sm font-bold text-stone-600 hover:text-teal-700">← {{ equipment.name }}</a>
+    <h1 class="mt-3 text-2xl font-bold">Emprestar {{ equipment.name|lower }}</h1>
+    <p class="text-sm text-stone-600">{{ equipment.tag }}</p>
+    <form method="post" class="mt-6 space-y-6" novalidate>
+      {% csrf_token %}
+      {% for error in form.non_field_errors %}<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>{% endfor %}
+      <div>
+        {% include "lending/includes/person_picker.html" with field="person" label="Quem recebe" chosen=form.cleaned_data.person|default:None results=None %}
+        {% for error in form.person.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        {% include "lending/includes/person_picker.html" with field="guarantor" label="Fiador" chosen=form.cleaned_data.guarantor|default:None results=None %}
+        {% for error in form.guarantor.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        {% include "includes/field.html" with field=form.lent_date %}
+        {% include "includes/field.html" with field=form.due_date %}
+      </div>
+      <button type="submit" class="w-full rounded-full bg-teal-700 py-3 font-bold text-white hover:bg-teal-800">Registrar empréstimo</button>
+    </form>
+  </div>
+{% endblock %}
