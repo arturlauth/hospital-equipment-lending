@@ -3,7 +3,7 @@ from datetime import date
 from urllib.parse import urlencode
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Max, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from hospitalequip.inventory.services import (
@@ -35,11 +35,65 @@ def add_months(day, months):
     )
 
 
+# Tab key -> (label, the person's loans in that role as a related name, its count annotation).
+PERSON_ROLES = {
+    "beneficiario": ("Beneficiários", "loans", "borrower_count"),
+    "solidario": ("Solidários", "guaranteed_loans", "guarantor_count"),
+}
+
+
+def why_listed(person, role):
+    """Why the person shows on a role tab: their open loans in that role, else the latest one."""
+    loans = sorted(
+        getattr(person, PERSON_ROLES[role][1]).all(), key=lambda loan: loan.lent_date, reverse=True
+    )
+    open_loans = [loan for loan in loans if loan.return_date is None]
+    return open_loans or loans[:1]
+
+
 @staff_required
 def person_list(request):
+    """People with how often each was Beneficiário and Solidário, counted from all loans."""
     query = request.GET.get("q", "").strip()
-    people = search_people(query) if query else Person.objects.all()
-    return render(request, "lending/person_list.html", {"people": people, "query": query})
+    role = request.GET.get("papel", "")
+    people = (
+        (search_people(query) if query else Person.objects.all())
+        .annotate(
+            borrower_count=Count("loans", distinct=True),
+            guarantor_count=Count("guaranteed_loans", distinct=True),
+        )
+        .order_by("name")  # aggregation drops Meta.ordering
+    )
+    if role in PERSON_ROLES:
+        _, related, count = PERSON_ROLES[role]
+        people = (
+            people.filter(**{f"{count}__gt": 0})
+            .annotate(
+                has_open=Count(related, filter=Q(**{f"{related}__return_date__isnull": True})),
+                latest=Max(f"{related}__lent_date"),
+            )
+            .order_by("-has_open", "-latest", "name")
+            .prefetch_related(
+                Prefetch(
+                    related,
+                    queryset=Loan.objects.select_related("equipment", "person", "guarantor"),
+                )
+            )
+        )
+        for person in people:
+            person.why = why_listed(person, role)
+    else:
+        role = ""
+    tabs = [
+        {
+            "label": label,
+            "active": key == role,
+            "query": urlencode({k: v for k, v in {"papel": key, "q": query}.items() if v}),
+        }
+        for key, label in [("", "Todas"), *((k, v[0]) for k, v in PERSON_ROLES.items())]
+    ]
+    context = {"people": people, "query": query, "role": role, "tabs": tabs}
+    return render(request, "lending/person_list.html", context)
 
 
 @staff_required
