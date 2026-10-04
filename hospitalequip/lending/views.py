@@ -5,10 +5,10 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from hospitalequip.inventory.services import get_lendable_equipment
+from hospitalequip.inventory.services import get_lendable_equipment, mark_damaged
 from hospitalequip.staff.access import staff_required
 
-from .forms import LoanForm, PersonForm
+from .forms import LoanForm, PersonForm, ReturnForm
 from .models import LOAN_TERM_MONTHS, Loan, Person
 from .validators import only_digits
 
@@ -90,4 +90,28 @@ def lend(request, equipment_pk):
 @staff_required
 def loan_detail(request, pk):
     loan = get_object_or_404(Loan.objects.select_related("equipment", "person", "guarantor"), pk=pk)
-    return render(request, "lending/loan_detail.html", {"loan": loan})
+    return_form = ReturnForm(initial={"return_date": date.today()}, loan=loan)
+    return render(request, "lending/loan_detail.html", {"loan": loan, "return_form": return_form})
+
+
+@staff_required
+def return_loan(request, pk):
+    """Close an open loan; "voltou com defeito" also takes the equipment out of lending."""
+    if request.method != "POST":
+        return redirect("lending:loan", pk=pk)
+    with transaction.atomic():
+        loan = get_object_or_404(
+            Loan.objects.select_for_update(of=("self",)).select_related(
+                "equipment", "person", "guarantor"
+            ),
+            pk=pk,
+            return_date__isnull=True,
+        )
+        form = ReturnForm(request.POST, loan=loan)
+        if form.is_valid():
+            loan.return_date = form.cleaned_data["return_date"]
+            loan.save(update_fields=["return_date"])
+            if form.cleaned_data["damaged"]:
+                mark_damaged(loan.equipment_id)
+            return redirect("lending:loan", pk=loan.pk)
+    return render(request, "lending/loan_detail.html", {"loan": loan, "return_form": form})

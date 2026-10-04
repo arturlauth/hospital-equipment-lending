@@ -56,14 +56,14 @@ class LoanForm(forms.ModelForm):
     person = forms.ModelChoiceField(
         Person.objects.all(),
         widget=forms.HiddenInput,
-        label="Quem recebe",
-        error_messages={"required": "Escolha quem recebe o equipamento."},
+        label="Beneficiário",
+        error_messages={"required": "Escolha o beneficiário."},
     )
     guarantor = forms.ModelChoiceField(
         Person.objects.all(),
         widget=forms.HiddenInput,
-        label="Fiador",
-        error_messages={"required": "Escolha o fiador."},
+        label="Solidário",
+        error_messages={"required": "Escolha o solidário."},
     )
 
     class Meta:
@@ -78,8 +78,27 @@ class LoanForm(forms.ModelForm):
         cleaned = super().clean()
         person, guarantor = cleaned.get("person"), cleaned.get("guarantor")
         if person and person == guarantor:
-            self.add_error("guarantor", "O fiador não pode ser quem recebe o equipamento.")
+            self.add_error("guarantor", "O solidário não pode ser o próprio beneficiário.")
         lent, due = cleaned.get("lent_date"), cleaned.get("due_date")
         if lent and due and due < lent:
             self.add_error("due_date", "A devolução não pode ser antes do empréstimo.")
         return cleaned
+
+
+class ReturnForm(forms.Form):
+    return_date = forms.DateField(
+        label="Devolvido em", widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
+    )
+    damaged = forms.BooleanField(label="Voltou com defeito", required=False)
+
+    def __init__(self, *args, loan, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.loan = loan
+
+    def clean_return_date(self):
+        return_date = self.cleaned_data["return_date"]
+        if return_date < self.loan.lent_date:
+            raise forms.ValidationError("A devolução não pode ser antes do empréstimo.")
+        if return_date > date.today():
+            raise forms.ValidationError("A devolução não pode estar no futuro.")
+        return return_date

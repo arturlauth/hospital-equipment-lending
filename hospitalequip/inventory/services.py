@@ -11,3 +11,8 @@ def get_lendable_equipment(pk):
         status=Equipment.Status.ACTIVE,
         open_loans=0,
     )
+
+
+def mark_damaged(equipment_id):
+    """Take equipment out of lending until it is repaired."""
+    Equipment.objects.filter(pk=equipment_id).update(status=Equipment.Status.DAMAGED)

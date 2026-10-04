@@ -11,11 +11,11 @@
       {% csrf_token %}
       {% for error in form.non_field_errors %}<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>{% endfor %}
       <div>
-        {% include "lending/includes/person_picker.html" with field="person" label="Quem recebe" chosen=form.cleaned_data.person|default:None results=None %}
+        {% include "lending/includes/person_picker.html" with field="person" label="Beneficiário" chosen=form.cleaned_data.person|default:None results=None %}
         {% for error in form.person.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
       </div>
       <div>
-        {% include "lending/includes/person_picker.html" with field="guarantor" label="Fiador" chosen=form.cleaned_data.guarantor|default:None results=None %}
+        {% include "lending/includes/person_picker.html" with field="guarantor" label="Solidário" chosen=form.cleaned_data.guarantor|default:None results=None %}
         {% for error in form.guarantor.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
       </div>
       <div class="grid grid-cols-2 gap-3">
