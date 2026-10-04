@@ -12,7 +12,7 @@
       <a href="{% url 'inventory:catalog' %}" class="text-lg font-semibold text-sky-700">Equipamentos</a>
       <div class="flex items-center gap-4 text-sm">
         {% if user.is_authenticated %}
-          <a href="{% url 'staff:home' %}" class="text-slate-600 hover:text-sky-700">Equipe</a>
+          <a href="{% url 'lending:people' %}" class="text-slate-600 hover:text-sky-700">Pessoas</a>
           <form method="post" action="{% url 'staff:logout' %}">
             {% csrf_token %}
             <button type="submit" class="text-slate-600 hover:text-sky-700">Sair</button>

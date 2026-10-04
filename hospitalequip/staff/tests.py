@@ -19,7 +19,8 @@ def test_staff_area_sends_anonymous_visitors_to_login(client):
 
 @pytest.mark.django_db
 def test_login_lands_on_staff_area(client):
-    User.objects.create_user("ana", password="senha-forte-123")
+    user = User.objects.create_user("ana", password="senha-forte-123")
+    user.groups.add(Group.objects.get(name=roles.ATTENDANT))
     response = client.post(
         reverse("staff:login"), {"username": "ana", "password": "senha-forte-123"}
     )

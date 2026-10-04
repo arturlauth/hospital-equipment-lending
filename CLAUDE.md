@@ -53,7 +53,8 @@ are required; `.env.example` lists every variable (`config/test_env_example.py` 
 ## Architecture
 
 Django project in `config/`, apps under `hospitalequip/`: `inventory` (Warehouse, Category, Equipment with images and spec rows) and
-`lending` (Person, Loan), `staff` (login, roles as auth Groups created by migration). Shared
+`lending` (Person, Loan), `staff` (login, roles as auth Groups created by migration; staff pages use
+`staff.access.staff_required`). Shared
 layout in `templates/base.html`. An app's models are imported only by that app, enforced by Import Linter
 (`uv run lint-imports`; contracts in `pyproject.toml`); other apps go through its `services.py`.
 `lending` FKs `inventory`; `inventory` reads loan state through that reverse relation (ORM read,
