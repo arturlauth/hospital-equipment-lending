@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 from django.contrib.auth.models import Group, User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 from django.urls import reverse
 
@@ -655,3 +656,95 @@ def test_todas_lists_people_alphabetically_and_search_keeps_the_tab(
     assert names[0] == "Ana Última" and names == sorted(names)
     page = client.get(reverse("lending:people"), {"papel": "solidario"}).content.decode()
     assert '<input type="hidden" name="papel" value="solidario">' in page
+
+
+# --- Signed contract ------------------------------------------------------------------------
+
+PDF = b"%PDF-1.4\n% contrato de teste\n"
+
+
+@pytest.fixture
+def private_media(settings, tmp_path):
+    settings.PRIVATE_MEDIA_ROOT = tmp_path
+    return tmp_path
+
+
+def upload_contract(client, loan, content=PDF, name="contrato.pdf"):
+    return client.post(
+        reverse("lending:contract", args=[loan.pk]),
+        {"contract": SimpleUploadedFile(name, content, content_type="application/pdf")},
+    )
+
+
+# Rule: staff attach the signed PDF to a loan; replacing it overwrites the file; both are logged.
+
+
+@pytest.mark.django_db
+def test_staff_attaches_a_contract_and_downloads_it(client, attendant, open_loan, private_media):
+    upload_contract(client, open_loan)
+    open_loan.refresh_from_db()
+    assert open_loan.logs.get().action == LoanLog.Action.CONTRACT_ADDED
+    response = client.get(reverse("lending:contract_download", args=[open_loan.pk]))
+    assert b"".join(response.streaming_content) == PDF
+
+
+@pytest.mark.django_db
+def test_replacing_a_contract_overwrites_the_file_and_is_logged(
+    client, attendant, open_loan, private_media
+):
+    upload_contract(client, open_loan)
+    upload_contract(client, open_loan, content=PDF + b"v2")
+    open_loan.refresh_from_db()
+    files = list(private_media.rglob("*.pdf"))
+    assert len(files) == 1 and files[0].read_bytes() == PDF + b"v2"
+    assert [log.action for log in open_loan.logs.all()] == [
+        LoanLog.Action.CONTRACT_REPLACED,
+        LoanLog.Action.CONTRACT_ADDED,
+    ]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "content, name",
+    [(b"texto qualquer", "contrato.pdf"), (PDF, "contrato.docx")],
+)
+def test_contract_must_be_a_pdf(client, attendant, open_loan, private_media, content, name):
+    upload_contract(client, open_loan, content=content, name=name)
+    open_loan.refresh_from_db()
+    assert not open_loan.contract
+
+
+@pytest.mark.django_db
+def test_contract_size_limit_is_inclusive(client, attendant, open_loan, private_media, monkeypatch):
+    monkeypatch.setattr("hospitalequip.lending.forms.CONTRACT_MAX_MB", 1)
+    limit = 1024 * 1024
+    upload_contract(client, open_loan, content=PDF + b"x" * (limit - len(PDF) + 1))
+    open_loan.refresh_from_db()
+    assert not open_loan.contract
+    upload_contract(client, open_loan, content=PDF + b"x" * (limit - len(PDF)))
+    open_loan.refresh_from_db()
+    assert open_loan.contract
+
+
+@pytest.mark.django_db
+def test_contract_is_never_public(client, open_loan, private_media, settings):
+    open_loan.contract.save("c.pdf", SimpleUploadedFile("c.pdf", PDF))
+    url = reverse("lending:contract_download", args=[open_loan.pk])
+    assert client.get(url).status_code == 302  # anonymous -> login
+    client.force_login(User.objects.create_user("visitante", password="x"))
+    assert client.get(url).status_code == 403
+    assert not str(private_media).startswith(str(settings.MEDIA_ROOT))
+    with pytest.raises(ValueError):
+        _ = open_loan.contract.url
+
+
+@pytest.mark.django_db
+def test_pending_contract_filter_lists_only_loans_without_one(
+    client, attendant, open_loan, returned_loan, private_media
+):
+    second = Loan.objects.create(
+        equipment=open_loan.equipment, person=open_loan.person, lent_date=date(2026, 9, 20)
+    )
+    upload_contract(client, second)
+    loans = client.get(reverse("lending:loans"), {"situacao": "sem-contrato"}).context["loans"]
+    assert [loan.pk for loan in loans] == [returned_loan.pk]

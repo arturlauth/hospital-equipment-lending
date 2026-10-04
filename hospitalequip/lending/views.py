@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Prefetch, Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from hospitalequip.inventory.services import (
@@ -13,7 +14,7 @@ from hospitalequip.inventory.services import (
 )
 from hospitalequip.staff.access import manager_required, staff_required
 
-from .forms import LoanEditForm, LoanForm, PersonForm, ReturnForm
+from .forms import ContractForm, LoanEditForm, LoanForm, PersonForm, ReturnForm
 from .models import LOAN_TERM_MONTHS, Loan, LoanLog, Person
 from .validators import only_digits
 
@@ -154,8 +155,44 @@ def loan_detail(request, pk):
     return render_loan(request, loan, return_form)
 
 
-def render_loan(request, loan, return_form):
-    return render(request, "lending/loan_detail.html", {"loan": loan, "return_form": return_form})
+def render_loan(request, loan, return_form, contract_form=None):
+    context = {
+        "loan": loan,
+        "return_form": return_form,
+        "contract_form": contract_form or ContractForm(),
+    }
+    return render(request, "lending/loan_detail.html", context)
+
+
+@staff_required
+def loan_contract(request, pk):
+    """Attach or replace the signed contract; the old file is overwritten and the action logged."""
+    if request.method != "POST":
+        return redirect("lending:loan", pk=pk)
+    loan = get_object_or_404(Loan.objects.select_related("equipment", "person", "guarantor"), pk=pk)
+    form = ContractForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return_form = ReturnForm(initial={"return_date": date.today()}, loan=loan)
+        return render_loan(request, loan, return_form, contract_form=form)
+    action = LoanLog.Action.CONTRACT_REPLACED if loan.contract else LoanLog.Action.CONTRACT_ADDED
+    with transaction.atomic():
+        loan.contract.save("contrato.pdf", form.cleaned_data["contract"], save=False)
+        loan.save(update_fields=["contract"])
+        LoanLog.record(loan, action, request.user)
+    return redirect("lending:loan", pk=pk)
+
+
+@staff_required
+def contract_download(request, pk):
+    """The only way to read a contract: staff only, served from private storage."""
+    loan = get_object_or_404(Loan.objects.select_related("equipment"), pk=pk)
+    if not loan.contract:
+        raise Http404
+    return FileResponse(
+        loan.contract.open("rb"),
+        content_type="application/pdf",
+        filename=f"contrato-{loan.equipment.tag}-{loan.pk}.pdf",
+    )
 
 
 RETURN_STATUS = {ReturnForm.DAMAGED: "damaged", ReturnForm.LOST: "lost"}
@@ -244,6 +281,7 @@ LOAN_FILTERS = {
     "abertos": ("Em aberto", lambda: Q(return_date__isnull=True)),
     "atrasados": ("Atrasados", overdue_loans),
     "devolvidos": ("Devolvidos", lambda: Q(return_date__isnull=False)),
+    "sem-contrato": ("Contrato pendente", lambda: Q(contract="")),
 }
 
 

@@ -19,13 +19,20 @@
       </a>
       <div class="flex items-center gap-5 text-sm font-bold">
         {% if user.is_authenticated %}
-          <a href="{% url 'lending:loans' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Histórico</a>
-          <a href="{% url 'lending:people' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Pessoas</a>
-          {% if is_manager %}<a href="{% url 'inventory:status_log' %}" class="hidden text-stone-600 hover:text-teal-700 md:inline">Registros</a>{% endif %}
-          <form method="post" action="{% url 'staff:logout' %}">
-            {% csrf_token %}
-            <button type="submit" class="text-stone-600 hover:text-teal-700">Sair</button>
-          </form>
+          {# One staff menu (staff.menu) replaces the inline links; the staff home shows the same list. #}
+          <details class="relative">
+            <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full px-4 ring-1 ring-stone-300 hover:ring-teal-600">{% include "includes/icon.html" with name="menu" %}Menu</summary>
+            <div class="absolute right-0 z-20 mt-2 w-64 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-stone-200">
+              <a href="{% url 'staff:home' %}" class="block rounded-lg px-3 py-2 hover:bg-stone-50">Início</a>
+              {% for item in staff_menu %}
+                <a href="{{ item.url }}" class="block rounded-lg px-3 py-2 hover:bg-stone-50">{{ item.label }}</a>
+              {% endfor %}
+              <form method="post" action="{% url 'staff:logout' %}" class="border-t border-stone-100 pt-1">
+                {% csrf_token %}
+                <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-stone-600 hover:bg-stone-50">Sair</button>
+              </form>
+            </div>
+          </details>
         {% else %}
           <a href="{% url 'staff:login' %}" class="text-teal-700 hover:text-teal-800">Entrar</a>
         {% endif %}
@@ -36,9 +43,9 @@
     {% block content %}{% endblock %}
   </main>
   {% if user.is_authenticated %}
-    {# Staff tab bar on phones; more sections join as they ship. #}
+    {# Staff tab bar on phones; Início opens the hub with every destination. #}
     <nav class="fixed inset-x-0 bottom-0 grid grid-cols-4 border-t border-stone-200 bg-white text-xs font-bold md:hidden">
-      <a href="{% url 'inventory:catalog' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="grid" %}Catálogo</a>
+      <a href="{% url 'inventory:staff_equipment' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="grid" %}Equipamentos</a>
       <a href="{% url 'lending:loans' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="history" %}Histórico</a>
       <a href="{% url 'lending:people' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="users" %}Pessoas</a>
       <a href="{% url 'staff:home' %}" class="flex min-h-16 flex-col items-center justify-center gap-1 text-stone-600">{% include "includes/icon.html" with name="home" %}Início</a>

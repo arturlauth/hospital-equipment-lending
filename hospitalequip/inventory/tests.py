@@ -1,12 +1,21 @@
+import io
 from datetime import date
 from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import Group, User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 from django.urls import reverse
+from PIL import Image
 
-from hospitalequip.inventory.models import Category, Equipment, EquipmentImage, Warehouse
+from hospitalequip.inventory.models import (
+    Category,
+    Equipment,
+    EquipmentImage,
+    EquipmentSpec,
+    Warehouse,
+)
 from hospitalequip.lending.models import Loan, Person
 from hospitalequip.staff import roles
 
@@ -341,3 +350,201 @@ def test_equipment_page_never_shows_the_status_log(client, make_item, staff_user
     client.force_login(staff_user(roles.MANAGER))
     page = client.get(reverse("inventory:equipment", args=[item.pk])).content.decode()
     assert "Motivo secreto" not in page
+
+
+# --- Equipment form (staff create/edit) -----------------------------------------------------
+
+
+def png(name="foto.png"):
+    buffer = io.BytesIO()
+    Image.new("RGB", (4, 3), "teal").save(buffer, "PNG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
+
+def equipment_post(item=None, specs=(), photos=(), new_images=(), **fields):
+    """POST data for the equipment form: specs are (section, label, value[, delete]) rows."""
+    data = {
+        "name": "Andador articulado",
+        "brand": "",
+        "category": fields.pop("category"),
+        "warehouse": fields.pop("warehouse"),
+        "description": "",
+        "value": "",
+        "acquired_on": "",
+        "specs-TOTAL_FORMS": len(specs),
+        "specs-INITIAL_FORMS": sum(1 for s in specs if s[0] is not None and len(s) > 3),
+        "images-TOTAL_FORMS": len(photos),
+        "images-INITIAL_FORMS": len(photos),
+        "images": list(new_images),
+    } | fields
+    for n, row in enumerate(specs):
+        spec_id, section, label, value, *delete = row
+        data |= {
+            f"specs-{n}-id": spec_id or "",
+            f"specs-{n}-section": section,
+            f"specs-{n}-label": label,
+            f"specs-{n}-value": value,
+        }
+        if delete:
+            data[f"specs-{n}-DELETE"] = "on"
+    for n, (photo_id, order, *delete) in enumerate(photos):
+        data |= {f"images-{n}-id": photo_id, f"images-{n}-order": order}
+        if delete:
+            data[f"images-{n}-DELETE"] = "on"
+    return data
+
+
+@pytest.fixture
+def media(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+
+
+# Rule: any staff member creates an item; the patrimônio is generated from its category.
+
+
+@pytest.mark.django_db
+def test_attendant_creates_an_item_with_photos_and_ordered_specs(
+    client, staff_user, warehouse, walkers, media
+):
+    client.force_login(staff_user(roles.ATTENDANT))
+    data = equipment_post(
+        category=walkers.pk,
+        warehouse=warehouse.pk,
+        specs=[(None, "Medidas", "Altura", "90 cm"), (None, "Medidas", "Peso", "3 kg")],
+        new_images=[png("a.png"), png("b.png"), png("c.png")],
+    )
+    data["specs-INITIAL_FORMS"] = 0
+    response = client.post(reverse("inventory:equipment_new"), data)
+    item = Equipment.objects.get()
+    assert response.url == reverse("inventory:equipment", args=[item.pk])
+    assert item.tag == "ANDADOR 0001"
+    assert [s.label for s in item.specs.all()] == ["Altura", "Peso"]
+    assert item.images.count() == 3
+
+
+@pytest.mark.django_db
+def test_edit_never_changes_category_nor_patrimonio(client, staff_user, make_item, warehouse):
+    item = make_item(images=0)
+    beds = Category.objects.create(name="Cama", code="CAMA")
+    client.force_login(staff_user(roles.ATTENDANT))
+    data = equipment_post(category=beds.pk, warehouse=warehouse.pk, name="Novo nome")
+    client.post(reverse("inventory:equipment_edit", args=[item.pk]), data)
+    item.refresh_from_db()
+    assert (item.name, item.category, item.tag) == ("Novo nome", item.category, "ANDADOR 0001")
+    assert item.category.code == "ANDADOR"
+
+
+@pytest.mark.django_db
+def test_edit_removes_a_spec_row_and_ignores_a_blank_new_row(
+    client, staff_user, make_item, warehouse, walkers
+):
+    item = make_item(images=0)
+    keep = EquipmentSpec.objects.create(equipment=item, section="A", label="Fica", value="1")
+    drop = EquipmentSpec.objects.create(equipment=item, section="A", label="Sai", value="2")
+    client.force_login(staff_user(roles.ATTENDANT))
+    data = equipment_post(
+        category=walkers.pk,
+        warehouse=warehouse.pk,
+        specs=[
+            (keep.pk, "A", "Fica", "1", False),
+            (drop.pk, "A", "Sai", "2", True),
+            (None, "", "", ""),
+        ],
+    )
+    data["specs-INITIAL_FORMS"] = 2
+    data.pop("specs-0-DELETE", None)
+    client.post(reverse("inventory:equipment_edit", args=[item.pk]), data)
+    assert list(item.specs.values_list("label", flat=True)) == ["Fica"]
+
+
+@pytest.mark.django_db
+def test_edit_removes_a_photo(client, staff_user, make_item, warehouse, walkers):
+    item = make_item(images=3)
+    first, *rest = item.images.all()
+    client.force_login(staff_user(roles.ATTENDANT))
+    photos = [(first.pk, 0, True), *((p.pk, n + 1) for n, p in enumerate(rest))]
+    data = equipment_post(category=walkers.pk, warehouse=warehouse.pk, photos=photos)
+    client.post(reverse("inventory:equipment_edit", args=[item.pk]), data)
+    assert list(item.images.values_list("pk", flat=True)) == [p.pk for p in rest]
+
+
+@pytest.mark.django_db
+def test_equipment_form_is_staff_only(client, warehouse, walkers):
+    response = client.get(reverse("inventory:equipment_new"))
+    assert response.status_code == 302
+    client.force_login(User.objects.create_user("visitante", password="x"))
+    assert client.get(reverse("inventory:equipment_new")).status_code == 403
+
+
+# --- Listings: public catalog and staff equipment view --------------------------------------
+
+
+def staff_list(client, **params):
+    return {
+        e.pk
+        for e in client.get(reverse("inventory:staff_equipment"), params).context["equipment_list"]
+    }
+
+
+# Rule: the staff view shows every item, hidden ones included; Baixado only when chosen.
+
+
+@pytest.mark.django_db
+def test_staff_list_shows_hidden_items_but_baixado_only_when_chosen(client, staff_user, make_item):
+    no_photos = make_item(images=0)
+    lost = make_item(status=Equipment.Status.LOST)
+    written_off = make_item(status=Equipment.Status.WRITTEN_OFF)
+    client.force_login(staff_user(roles.ATTENDANT))
+    assert staff_list(client) == {no_photos.pk, lost.pk}
+    assert staff_list(client, situacao="written_off") == {written_off.pk}
+
+
+@pytest.mark.django_db
+def test_staff_list_lent_filter_follows_open_loans(client, staff_user, make_item):
+    lent, free, returned = make_item(), make_item(), make_item()
+    lend(lent)
+    loan = lend(returned)
+    loan.return_date = date(2026, 9, 5)
+    loan.save()
+    client.force_login(staff_user(roles.ATTENDANT))
+    assert staff_list(client, emprestimo="emprestado") == {lent.pk}
+    assert staff_list(client, emprestimo="livre") == {free.pk, returned.pk}
+
+
+@pytest.mark.django_db
+def test_staff_list_filters_combine_and_search_finds_the_patrimonio(
+    client, staff_user, make_item, warehouse
+):
+    walker = make_item()
+    bed = Equipment.objects.create(
+        name="Cama", category=Category.objects.create(name="Cama", code="CAMA"), warehouse=warehouse
+    )
+    lend(walker)
+    client.force_login(staff_user(roles.ATTENDANT))
+    assert staff_list(client, categoria=walker.category_id, emprestimo="emprestado") == {walker.pk}
+    assert staff_list(client, categoria=bed.category_id, emprestimo="emprestado") == set()
+    assert staff_list(client, q="cama 0001") == {bed.pk}
+
+
+@pytest.mark.django_db
+def test_staff_list_is_staff_only(client):
+    assert client.get(reverse("inventory:staff_equipment")).status_code == 302
+
+
+# Rule: the public catalog is a paged feed of 24 items, filterable by category.
+
+
+@pytest.mark.django_db
+def test_catalog_pages_hold_24_items(client, make_item):
+    items = [make_item(name=f"Andador {n:02d}") for n in range(25)]
+    assert len(catalog(client)) == 24
+    page_two = client.get(reverse("inventory:catalog"), {"pagina": 2}).context["equipment_list"]
+    assert [e.pk for e in page_two] == [items[-1].pk]
+
+
+@pytest.mark.django_db
+def test_catalog_category_filter_never_shows_hidden_items(client, make_item, walkers):
+    shown = make_item()
+    make_item(images=2)
+    response = client.get(reverse("inventory:catalog"), {"categoria": walkers.pk})
+    assert [e.pk for e in response.context["equipment_list"]] == [shown.pk]

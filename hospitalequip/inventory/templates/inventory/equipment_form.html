@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{% if equipment %}Editar {{ equipment.tag }}{% else %}Cadastrar equipamento{% endif %}{% endblock %}
+
+{% block content %}
+  <div class="mx-auto max-w-3xl">
+    <h1 class="text-2xl font-bold">{% if equipment %}Editar {{ equipment.name }} <span class="font-normal text-stone-500">{{ equipment.tag }}</span>{% else %}Cadastrar equipamento{% endif %}</h1>
+    <form method="post" enctype="multipart/form-data" class="mt-5 space-y-6" novalidate>
+      {% csrf_token %}
+      {% for error in form.non_field_errors %}<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>{% endfor %}
+
+      <section class="space-y-4 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+        <h2 class="font-bold">Dados</h2>
+        <div class="grid gap-4 sm:grid-cols-2">
+          {% include "includes/field.html" with field=form.name %}
+          {% include "includes/field.html" with field=form.brand %}
+          <div>
+            {% include "includes/field.html" with field=form.category %}
+            {% if form.category.help_text %}<p class="mt-1 text-sm text-stone-500">{{ form.category.help_text }}</p>{% endif %}
+          </div>
+          {% include "includes/field.html" with field=form.warehouse %}
+          {% include "includes/field.html" with field=form.value %}
+          {% include "includes/field.html" with field=form.acquired_on %}
+        </div>
+        <label class="block text-sm font-bold">{{ form.description.label }} <span class="font-normal text-stone-400">(opcional)</span>
+          <span class="mt-1 block [&>textarea]:w-full [&>textarea]:rounded-lg [&>textarea]:border [&>textarea]:border-stone-300 [&>textarea]:px-3 [&>textarea]:py-2 [&>textarea]:text-base">{{ form.description }}</span>
+        </label>
+      </section>
+
+      <section class="space-y-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+        <h2 class="font-bold">Fotos <span class="text-sm font-normal text-stone-500">· o catálogo público mostra o item a partir de 3 fotos</span></h2>
+        {{ images.management_form }}
+        <ul class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {% for photo in images %}
+            <li class="rounded-xl p-2 ring-1 ring-stone-200">
+              {{ photo.id }}
+              <img src="{{ photo.instance.image.url }}" alt="" class="aspect-[4/3] w-full rounded-lg bg-stone-100 object-cover">
+              <div class="mt-2 flex items-center justify-between gap-2 text-sm">
+                <label class="flex items-center gap-1">Ordem <span class="[&>input]:w-14 [&>input]:rounded [&>input]:border [&>input]:border-stone-300 [&>input]:px-1">{{ photo.order }}</span></label>
+                <label class="flex items-center gap-1 text-stone-600">{{ photo.DELETE }} Remover</label>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+        <label class="block text-sm font-bold">{{ new_images.images.label }}
+          <span class="mt-1 block">{{ new_images.images }}</span>
+          {% for error in new_images.images.errors %}<span class="mt-1 block text-sm font-normal text-red-600">{{ error }}</span>{% endfor %}
+        </label>
+      </section>
+
+      <section class="space-y-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+        <h2 class="font-bold">Especificações</h2>
+        {{ specs.management_form }}
+        <div id="spec-rows" class="space-y-3">
+          {% for row in specs %}{% include "inventory/includes/spec_row.html" %}{% endfor %}
+        </div>
+        {# Index = current TOTAL_FORMS; the counter is bumped once the new row arrives. #}
+        <button type="button" class="rounded-full px-4 py-2 text-sm font-bold text-teal-700 ring-1 ring-teal-200 hover:bg-teal-50"
+                hx-get="{% url 'inventory:spec_row' %}" hx-target="#spec-rows" hx-swap="beforeend"
+                hx-vals='js:{i: document.getElementById("id_specs-TOTAL_FORMS").value}'
+                hx-on::after-request="const t = document.getElementById('id_specs-TOTAL_FORMS'); t.value = +t.value + 1">Adicionar linha</button>
+      </section>
+
+      <button type="submit" class="w-full rounded-full bg-teal-700 py-3 font-bold text-white hover:bg-teal-800">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

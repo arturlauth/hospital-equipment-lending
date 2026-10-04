@@ -17,6 +17,7 @@ venv/
 # Django
 *.sqlite3
 /media/
+/private_media/
 /staticfiles/
 
 # Editors / OS
@@ -30,3 +31,6 @@ Thumbs.db
 
 # Temporary working plan
 /PLAN.md
+
+# Playwright MCP output (QA screenshots, snapshots, logs)
+.playwright*/

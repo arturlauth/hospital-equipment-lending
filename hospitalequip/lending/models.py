@@ -1,12 +1,46 @@
+import os
 from datetime import date
 
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models import F, Q
 
 from .validators import only_digits, validate_cep, validate_cpf
 
 LOAN_TERM_MONTHS = 6  # suggested time until the due date; staff can change it per loan
+CONTRACT_MAX_MB = 10
+
+
+class PrivateStorage(FileSystemStorage):
+    """Signed contracts: kept outside MEDIA_ROOT and never given a URL.
+
+    The folder is read from settings on each use (tests point it at a temp dir). Replacing a
+    contract overwrites its file: one file per loan.
+    """
+
+    def __init__(self):
+        super().__init__(allow_overwrite=True)
+
+    @property
+    def base_location(self):
+        return settings.PRIVATE_MEDIA_ROOT
+
+    @property
+    def location(self):
+        return os.path.abspath(self.base_location)
+
+    def url(self, name):
+        raise ValueError("Contracts have no public URL; use the staff download view.")
+
+
+def private_storage():
+    return PrivateStorage()
+
+
+def contract_path(loan, filename):
+    return f"contracts/loan-{loan.pk}.pdf"
+
 
 STATES = [
     (uf, uf)
@@ -75,6 +109,10 @@ class Loan(models.Model):
     lent_date = models.DateField("emprestado em")
     due_date = models.DateField("devolução prevista", null=True, blank=True)
     return_date = models.DateField("devolvido em", null=True, blank=True)
+    # Signed PDF; a loan may exist while it is pending. Read only through the staff download view.
+    contract = models.FileField(
+        "contrato assinado", upload_to=contract_path, storage=private_storage, blank=True
+    )
 
     class Meta:
         verbose_name = "empréstimo"
@@ -128,6 +166,8 @@ class LoanLog(models.Model):
         RETURNED = "returned", "Devolvido"
         EDITED = "edited", "Editado"
         REOPENED = "reopened", "Devolução desfeita"
+        CONTRACT_ADDED = "contract_added", "Contrato anexado"
+        CONTRACT_REPLACED = "contract_replaced", "Contrato substituído"
 
     loan = models.ForeignKey(
         Loan, on_delete=models.PROTECT, related_name="logs", verbose_name="empréstimo"

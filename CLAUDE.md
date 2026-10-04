@@ -40,6 +40,8 @@ Lending system for hospital equipment. Monorepo, one product.
   Sonnet) and loops fix → QA until it passes, then stops for Artur. QA logs in with the local
   `QA_USERNAME`/`QA_PASSWORD` test account from `.env`. Give QA numbered expectations with exact
   steps (URL, what to click, what must be true); re-runs list only the failed items.
+  QA writes screenshots/snapshots to `.playwright-mcp/` (gitignored); once QA has reported, Claude
+  deletes that folder (`rm -rf .playwright-mcp`), since the QA agent has no delete tool.
 - **"Merged" alone means clean up, without asking:** `git switch main`, `git pull`, then delete the
   merged branch locally (`git branch -d`) and on the remote (`git push origin --delete`).
 

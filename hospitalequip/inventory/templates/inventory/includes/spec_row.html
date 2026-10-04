@@ -1,0 +1,8 @@
+<div class="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2" data-spec-row>
+  {% include "includes/field.html" with field=row.section %}
+  {% include "includes/field.html" with field=row.label %}
+  {% include "includes/field.html" with field=row.value %}
+  {{ row.id }}
+  <label class="flex min-h-11 items-center gap-1 text-sm text-stone-600">{{ row.DELETE }} Remover</label>
+  {% for error in row.non_field_errors %}<p class="col-span-4 text-sm text-red-600">{{ error }}</p>{% endfor %}
+</div>
