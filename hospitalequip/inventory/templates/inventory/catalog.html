@@ -1,31 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}Equipamentos{% endblock %}
+{% block title %}Equipamentos para empréstimo{% endblock %}
 
 {% block content %}
-  <h1 class="mb-1 text-2xl font-semibold">Equipamentos</h1>
-  <p class="mb-6 text-slate-600">Itens do acervo para empréstimo gratuito.</p>
+  <div class="max-w-2xl">
+    <h1 class="text-3xl font-bold tracking-tight md:text-4xl">Precisa de um equipamento?</h1>
+    <p class="mt-2 text-lg text-stone-600">Empréstimo gratuito de cadeiras de rodas, andadores, camas e mais, sem burocracia.</p>
+  </div>
+
   {% regroup equipment_list by category as groups %}
+  <div class="sticky top-0 z-10 -mx-4 mt-6 flex gap-2 overflow-x-auto border-y border-stone-200 bg-stone-50/95 px-4 py-2 backdrop-blur">
+    {% for group in groups %}
+      <a href="#cat-{{ group.grouper.pk }}" class="inline-flex h-10 shrink-0 items-center rounded-full border border-stone-200 bg-white px-4 text-sm font-bold hover:border-teal-600">{{ group.grouper }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="mt-4 flex items-center justify-between text-sm">
+    <span class="text-stone-600">{{ equipment_list|length }} equipamento{{ equipment_list|length|pluralize }}</span>
+    <a href="?{% if not only_available %}disponiveis=1{% endif %}" role="switch" aria-checked="{{ only_available|yesno:'true,false' }}" class="flex min-h-11 items-center gap-2 font-bold">
+      <span class="relative inline-block h-6 w-10 rounded-full {% if only_available %}bg-teal-700{% else %}bg-stone-300{% endif %}">
+        <span class="absolute top-0.5 size-5 rounded-full bg-white {% if only_available %}right-0.5{% else %}left-0.5{% endif %}"></span>
+      </span>
+      Só disponíveis
+    </a>
+  </div>
+
   {% for group in groups %}
-    <section class="mb-10">
-      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{{ group.grouper }}</h2>
-      <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section id="cat-{{ group.grouper.pk }}" class="scroll-mt-20 pt-8">
+      <h2 class="mb-3 text-xl font-bold">{{ group.grouper }}</h2>
+      <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         {% for item in group.list %}
           <li>
-            <a href="{% url 'inventory:equipment' item.pk %}" class="group block overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 transition hover:shadow-md">
+            <a href="{% url 'inventory:equipment' item.pk %}" class="group block h-full rounded-2xl border border-stone-200 bg-white p-2 transition hover:border-teal-600 {% if not item.is_available %}opacity-75{% endif %}">
               {% with cover=item.images.all.0 %}
-                <img src="{{ cover.image.url }}" alt="{{ item.name }}" loading="lazy" class="aspect-[4/3] w-full bg-slate-100 object-cover">
+                <img src="{{ cover.image.url }}" alt="" loading="lazy" width="400" height="300" class="aspect-[4/3] w-full rounded-xl bg-stone-100 object-cover">
               {% endwith %}
-              <div class="space-y-2 p-4">
-                <p class="font-medium group-hover:text-sky-700">{{ item.name }}</p>
-                {% include "includes/availability_badge.html" with equipment=item %}
-              </div>
+              <p class="mt-2 line-clamp-2 px-1 font-bold leading-snug group-hover:text-teal-700">{{ item.name }}</p>
+              <p class="px-1 pt-1.5 pb-1">{% include "includes/availability_badge.html" with equipment=item %}</p>
             </a>
           </li>
         {% endfor %}
       </ul>
     </section>
   {% empty %}
-    <p class="text-slate-600">Nenhum equipamento no catálogo no momento.</p>
+    <p class="mt-10 text-lg text-stone-600">{% if only_available %}Nenhum equipamento disponível agora. <a href="?" class="font-bold text-teal-700 underline">Ver todos</a>{% else %}Ainda não há equipamentos aqui. Volte em breve.{% endif %}</p>
   {% endfor %}
 {% endblock %}

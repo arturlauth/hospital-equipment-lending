@@ -4,23 +4,23 @@
 
 {% block content %}
   <div class="mb-4 flex items-center justify-between gap-3">
-    <h1 class="text-2xl font-semibold">Pessoas</h1>
-    <a href="{% url 'lending:person_new' %}" class="rounded-lg bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">Cadastrar</a>
+    <h1 class="text-2xl font-bold">Pessoas</h1>
+    <a href="{% url 'lending:person_new' %}" class="rounded-full bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">Cadastrar</a>
   </div>
   <form method="get" class="mb-4">
     <input type="search" name="q" value="{{ query }}" placeholder="Buscar por nome ou CPF" autofocus
-           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus:border-sky-600 focus:outline-none">
+           class="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base focus:border-teal-600 focus:outline-none">
   </form>
-  <ul class="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+  <ul class="divide-y divide-stone-100 overflow-hidden rounded-2xl bg-white ring-1 ring-stone-200">
     {% for person in people %}
       <li>
-        <a href="{% url 'lending:person' person.pk %}" class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50">
-          <span class="font-medium">{{ person.name }}</span>
-          <span class="text-sm text-slate-500">{{ person.cpf_display }}</span>
+        <a href="{% url 'lending:person' person.pk %}" class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-stone-50">
+          <span class="font-bold">{{ person.name }}</span>
+          <span class="text-sm text-stone-500">{{ person.cpf_display }}</span>
         </a>
       </li>
     {% empty %}
-      <li class="px-4 py-6 text-center text-slate-500">Ninguém encontrado.</li>
+      <li class="px-4 py-6 text-center text-stone-500">Ninguém encontrado.</li>
     {% endfor %}
   </ul>
 {% endblock %}

@@ -2,3 +2,15 @@
 
 @source "../templates";
 @source "../hospitalequip";
+
+/* Look "A · Calmo": warm neutrals (stone), teal primary, Nunito Sans. */
+@theme {
+  --font-sans: "Nunito Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  :focus-visible {
+    outline: 3px solid var(--color-teal-600);
+    outline-offset: 2px;
+  }
+}
