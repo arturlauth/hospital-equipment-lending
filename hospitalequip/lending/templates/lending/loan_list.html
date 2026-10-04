@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico{% endblock %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold">Histórico de empréstimos</h1>
+  {# Search box stays put while typing; chips and rows are re-rendered by the server so the active chip is always right. #}
+  {# hx-history="false": Back re-fetches from the server, so the search box matches the URL. #}
+  <form id="loan-filters" method="get" hx-history="false" class="mt-4" hx-get="{% url 'lending:loans' %}" hx-trigger="input changed delay:250ms, search"
+        hx-target="#loan-results" hx-select="#loan-results" hx-swap="outerHTML" hx-push-url="true">
+    <input type="search" name="equipamento" value="{{ equipment }}" placeholder="Equipamento ou patrimônio" aria-label="Equipamento"
+           class="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-base sm:max-w-sm">
+  </form>
+
+  <div id="loan-results">
+    <input type="hidden" name="situacao" value="{{ status }}" form="loan-filters">
+    <nav class="mt-3 flex gap-2 overflow-x-auto text-sm font-bold" aria-label="Situação">
+      {% for chip in chips %}
+        <a href="?{{ chip.query }}" hx-get="?{{ chip.query }}" hx-target="#loan-results" hx-select="#loan-results" hx-swap="outerHTML" hx-push-url="true"
+           {% if chip.active %}aria-current="true"{% endif %}
+           class="flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 ring-1 {% if chip.active %}bg-teal-700 text-white ring-teal-700{% else %}bg-white text-stone-700 ring-stone-300 hover:ring-teal-600{% endif %}">
+          {{ chip.label }}{% if chip.active %}<span aria-hidden="true">✕</span><span class="sr-only">(remover filtro)</span>{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+
+    <p class="mt-5 mb-2 text-sm text-stone-500">{{ loans|length }} empréstimo{{ loans|length|pluralize }}{% if status or equipment %} · <a href="{% url 'lending:loans' %}" class="font-bold text-teal-700">limpar filtros</a>{% endif %}</p>
+    <ul class="divide-y divide-stone-100 overflow-hidden rounded-2xl bg-white text-sm ring-1 ring-stone-200">
+      {% for loan in loans %}
+        <li><a href="{% url 'lending:loan' loan.pk %}" class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-stone-50">
+          <span><b>{{ loan.equipment.name }}</b> <span class="text-stone-500">{{ loan.equipment.tag }}</span><br>
+            <span class="text-stone-600">{{ loan.person.name }} · {{ loan.lent_date|date:"d/m/Y" }} → {{ loan.return_date|date:"d/m/Y"|default:"…" }}</span></span>
+          {% include "includes/loan_status.html" %}
+        </a></li>
+      {% empty %}
+        <li class="px-4 py-6 text-center text-stone-500">Nenhum empréstimo encontrado.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

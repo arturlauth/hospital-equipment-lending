@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Editar empréstimo {{ loan.equipment.tag }}{% endblock %}
+
+{% block content %}
+  <div class="mx-auto max-w-lg">
+    <a href="{% url 'lending:loan' loan.pk %}" class="text-sm font-bold text-stone-600 hover:text-teal-700">← Empréstimo</a>
+    <h1 class="mt-3 text-2xl font-bold">Editar empréstimo</h1>
+    <p class="text-sm text-stone-600">{{ loan.equipment.name }} {{ loan.equipment.tag }} · {{ loan.person.name }} · emprestado em {{ loan.lent_date|date:"d/m/Y" }}</p>
+    <form method="post" class="mt-6 space-y-4 rounded-2xl bg-white p-4 ring-1 ring-stone-200" novalidate>
+      {% csrf_token %}
+      {% for error in form.non_field_errors %}<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>{% endfor %}
+      {% include "includes/field.html" with field=form.due_date %}
+      {% include "includes/field.html" with field=form.return_date %}
+      <p class="text-sm text-stone-500">{{ form.return_date.help_text }}</p>
+      <div class="flex gap-3">
+        <button type="submit" class="flex-1 rounded-full bg-teal-700 py-3 font-bold text-white hover:bg-teal-800">Salvar</button>
+        <a href="{% url 'lending:loan' loan.pk %}" class="rounded-lg px-4 py-3 text-stone-600 hover:bg-stone-100">Cancelar</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

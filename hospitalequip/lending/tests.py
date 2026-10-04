@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from django.contrib.auth.models import Group, User
 from django.db import IntegrityError
 from django.urls import reverse
 
-from hospitalequip.inventory.models import Category, Equipment, Warehouse
+from hospitalequip.inventory.models import Category, Equipment, EquipmentImage, Warehouse
 from hospitalequip.lending.models import Loan, Person
 from hospitalequip.lending.views import add_months
 from hospitalequip.staff import roles
@@ -296,3 +296,154 @@ def test_returned_equipment_can_be_lent_again(client, attendant, lendable, open_
     )
     assert response.status_code == 302
     assert open_loan.equipment.loans.filter(return_date__isnull=True).count() == 1
+
+
+# Rule: staff can correct a loan's dates; clearing the return date reopens it, unless lent again.
+
+
+@pytest.fixture
+def returned_loan(open_loan):
+    open_loan.return_date = date(2026, 9, 15)
+    open_loan.save()
+    return open_loan
+
+
+def edit(client, loan, **data):
+    return client.post(reverse("lending:loan_edit", args=[loan.pk]), {"due_date": "", **data})
+
+
+@pytest.mark.django_db
+def test_staff_corrects_a_mistyped_return_date(client, attendant, returned_loan):
+    edit(client, returned_loan, return_date="2026-09-12")
+    returned_loan.refresh_from_db()
+    assert returned_loan.return_date == date(2026, 9, 12)
+
+
+@pytest.mark.django_db
+def test_clearing_the_return_date_reopens_the_loan(client, attendant, returned_loan):
+    response = edit(client, returned_loan, return_date="")
+    returned_loan.refresh_from_db()
+    assert response.status_code == 302
+    assert returned_loan.return_date is None
+
+
+@pytest.mark.django_db
+def test_return_cannot_be_undone_once_the_equipment_was_lent_again(
+    client, attendant, returned_loan
+):
+    Loan.objects.create(
+        equipment=returned_loan.equipment,
+        person=Person.objects.create(
+            name="Outra", cpf="52998224725", birth_date=date(1970, 1, 1), phone="0"
+        ),
+        lent_date=date(2026, 9, 20),
+    )
+    response = edit(client, returned_loan, return_date="")
+    assert "return_date" in response.context["form"].errors
+    returned_loan.refresh_from_db()
+    assert returned_loan.return_date == date(2026, 9, 15)
+
+
+@pytest.mark.parametrize("return_date", ["2026-08-31", "2999-01-01"])
+@pytest.mark.django_db
+def test_corrected_return_date_stays_between_lent_date_and_today(
+    client, attendant, returned_loan, return_date
+):
+    response = edit(client, returned_loan, return_date=return_date)
+    assert "return_date" in response.context["form"].errors
+
+
+@pytest.mark.django_db
+def test_equipment_page_lists_its_loan_history_for_staff(client, attendant, returned_loan):
+    item = returned_loan.equipment
+    for n in range(3):  # enough photos to be public
+        EquipmentImage.objects.create(equipment=item, image=f"equipment/{n}.jpg")
+    reopened = Loan.objects.create(
+        equipment=item, person=returned_loan.person, lent_date=date(2026, 9, 20)
+    )
+    response = client.get(reverse("inventory:equipment", args=[item.pk]))
+    assert response.context["loans"] == [reopened, returned_loan]
+    assert response.context["open_loan"] == reopened
+
+
+# Rule: the history filters by status (open, overdue, returned) and by equipment name or tag.
+
+
+@pytest.mark.django_db
+def test_history_filters_by_status(client, attendant, open_loan, lendable):
+    equipment, person, _ = lendable
+    overdue = open_loan  # due date set below, in the past
+    overdue.due_date = date(2026, 9, 2)
+    overdue.save()
+    returned = Loan.objects.create(
+        equipment=equipment, person=person, lent_date=date(2026, 9, 1), return_date=date(2026, 9, 3)
+    )
+
+    def shown(status):
+        return list(client.get(reverse("lending:loans"), {"situacao": status}).context["loans"])
+
+    assert shown("abertos") == [overdue]
+    assert shown("atrasados") == [overdue]
+    assert shown("devolvidos") == [returned]
+    assert set(shown("")) == {overdue, returned}
+
+
+@pytest.mark.django_db
+def test_open_loan_due_today_is_not_overdue(client, attendant, open_loan):
+    open_loan.due_date = date.today()
+    open_loan.save()
+    response = client.get(reverse("lending:loans"), {"situacao": "atrasados"})
+    assert list(response.context["loans"]) == []
+
+
+@pytest.mark.django_db
+def test_history_finds_equipment_by_tag(client, attendant, open_loan, lendable):
+    response = client.get(
+        reverse("lending:loans"), {"equipamento": open_loan.equipment.tag.lower()}
+    )
+    assert list(response.context["loans"]) == [open_loan]
+
+
+@pytest.mark.django_db
+def test_tapping_the_active_status_chip_clears_it_and_keeps_the_search(client, attendant):
+    response = client.get(
+        reverse("lending:loans"), {"situacao": "abertos", "equipamento": "andador"}
+    )
+    chips = {chip["label"]: chip for chip in response.context["chips"]}
+    assert chips["Em aberto"]["active"]
+    assert chips["Em aberto"]["query"] == "equipamento=andador"
+    assert chips["Devolvidos"]["query"] == "situacao=devolvidos&equipamento=andador"
+
+
+@pytest.mark.django_db
+def test_history_page_renders_each_loan_row(client, attendant, open_loan):
+    page = client.get(reverse("lending:loans")).content.decode()
+    assert reverse("lending:loan", args=[open_loan.pk]) in page
+
+
+@pytest.mark.parametrize(
+    ("due", "returned", "overdue"),
+    [(-1, False, True), (0, False, False), (-1, True, False), (None, False, False)],
+)
+@pytest.mark.django_db
+def test_loan_is_overdue_only_when_open_and_past_due(open_loan, due, returned, overdue):
+    today = date.today()
+    open_loan.due_date = today + timedelta(days=due) if due is not None else None
+    open_loan.return_date = today if returned else None
+    assert open_loan.is_overdue is overdue
+
+
+@pytest.mark.django_db
+def test_person_page_marks_an_overdue_loan_as_late(client, attendant, open_loan):
+    open_loan.due_date = date(2026, 9, 2)
+    open_loan.save()
+    page = client.get(reverse("lending:person", args=[open_loan.person.pk])).content.decode()
+    assert "Atrasado" in page
+
+
+@pytest.mark.django_db
+def test_loan_page_warns_when_open_loan_equipment_is_not_active(client, attendant, open_loan):
+    open_loan.equipment.status = Equipment.Status.DAMAGED
+    open_loan.equipment.save()
+    page = client.get(reverse("lending:loan", args=[open_loan.pk])).content.decode()
+    assert "Equipamento danificado" in page

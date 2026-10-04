@@ -4,6 +4,9 @@
 
 {% block content %}
   <div class="mx-auto max-w-lg">
+    <div class="mb-4 flex justify-end">
+      <a href="{% url 'lending:loan_edit' loan.pk %}" class="rounded-lg px-3 py-2 text-sm font-bold text-teal-700 ring-1 ring-teal-200 hover:bg-teal-50">Editar</a>
+    </div>
     {% if loan.return_date %}
       <h1 class="text-2xl font-bold">Empréstimo encerrado</h1>
     {% else %}
@@ -11,6 +14,9 @@
         <h1 class="text-lg font-bold">✓ Empréstimo registrado</h1>
         <p>Para {{ loan.person.name }}{% if loan.due_date %}, volta em {{ loan.due_date|date:"d/m/Y" }}{% endif %}.</p>
       </div>
+    {% endif %}
+    {% if not loan.return_date and loan.equipment.status != "active" %}
+      <p class="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900"><b>Equipamento {{ loan.equipment.get_status_display|lower }}.</b> O empréstimo segue em aberto; se o status estiver errado, corrija no equipamento.</p>
     {% endif %}
     <dl class="mt-5 divide-y divide-stone-200 rounded-2xl bg-white px-4 ring-1 ring-stone-200">
       <div class="flex justify-between gap-4 py-3"><dt class="text-stone-600">Equipamento</dt><dd class="text-right font-bold"><a href="{% url 'inventory:equipment' loan.equipment.pk %}" class="hover:text-teal-700">{{ loan.equipment.name }}</a> <span class="font-normal text-stone-500">{{ loan.equipment.tag }}</span></dd></div>

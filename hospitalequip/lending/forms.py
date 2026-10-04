@@ -102,3 +102,38 @@ class ReturnForm(forms.Form):
         if return_date > date.today():
             raise forms.ValidationError("A devolução não pode estar no futuro.")
         return return_date
+
+
+class LoanEditForm(forms.ModelForm):
+    """Fix a loan's dates. Clearing the return date reopens the loan."""
+
+    class Meta:
+        model = Loan
+        fields = ["due_date", "return_date"]
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "return_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        }
+        help_texts = {"return_date": "Deixe em branco para desfazer a devolução."}
+
+    def clean_due_date(self):
+        due_date = self.cleaned_data["due_date"]
+        if due_date and due_date < self.instance.lent_date:
+            raise forms.ValidationError("A devolução prevista não pode ser antes do empréstimo.")
+        return due_date
+
+    def clean_return_date(self):
+        return_date = self.cleaned_data["return_date"]
+        if return_date is None:
+            lent_again = Loan.objects.filter(
+                equipment_id=self.instance.equipment_id, return_date__isnull=True
+            ).exclude(pk=self.instance.pk)
+            if lent_again.exists():
+                raise forms.ValidationError(
+                    "Não dá para desfazer: o equipamento já foi emprestado de novo."
+                )
+        elif return_date < self.instance.lent_date:
+            raise forms.ValidationError("A devolução não pode ser antes do empréstimo.")
+        elif return_date > date.today():
+            raise forms.ValidationError("A devolução não pode estar no futuro.")
+        return return_date

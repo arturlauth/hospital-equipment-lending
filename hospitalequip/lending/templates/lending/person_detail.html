@@ -25,10 +25,10 @@
   <h2 class="mt-8 mb-3 text-lg font-bold">Empréstimos</h2>
   <ul class="divide-y divide-stone-100 overflow-hidden rounded-2xl bg-white text-sm ring-1 ring-stone-200">
     {% for loan in loans %}
-      <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-        <span class="font-bold">{{ loan.equipment }}</span>
-        <span class="text-stone-500">{{ loan.lent_date|date:"d/m/Y" }} → {% if loan.return_date %}{{ loan.return_date|date:"d/m/Y" }}{% else %}<span class="font-bold text-amber-700">em aberto</span>{% endif %}</span>
-      </li>
+      <li><a href="{% url 'lending:loan' loan.pk %}" class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-stone-50">
+        <span><b>{{ loan.equipment }}</b><br><span class="text-stone-500">{{ loan.lent_date|date:"d/m/Y" }} → {{ loan.return_date|date:"d/m/Y"|default:"…" }}</span></span>
+        {% include "includes/loan_status.html" %}
+      </a></li>
     {% empty %}
       <li class="px-4 py-6 text-center text-stone-500">Nenhum empréstimo.</li>
     {% endfor %}
