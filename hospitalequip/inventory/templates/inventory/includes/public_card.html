@@ -1,0 +1,7 @@
+<a href="{% url 'inventory:equipment' item.pk %}" class="group block h-full rounded-2xl border border-stone-200 bg-white p-2 transition hover:border-teal-600 {% if not item.is_available %}opacity-75{% endif %}">
+  {% with cover=item.images.all.0 %}
+    <img src="{{ cover.image.url }}" alt="" loading="lazy" width="400" height="300" class="aspect-[4/3] w-full rounded-xl bg-stone-100 object-cover">
+  {% endwith %}
+  <p class="mt-2 line-clamp-2 px-1 font-bold leading-snug group-hover:text-teal-700">{{ item.name }}</p>
+  <p class="px-1 pt-1.5 pb-1">{% include "includes/availability_badge.html" with equipment=item %}</p>
+</a>

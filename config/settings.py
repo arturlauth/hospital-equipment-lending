@@ -131,6 +131,8 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # Uploaded files (equipment photos). Local disk until the infra phase picks a storage provider.
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Signed loan contracts: outside MEDIA_ROOT so no URL serves them; only a staff view reads them.
+PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
 
 
 # Authentication

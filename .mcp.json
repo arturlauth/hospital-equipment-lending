@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "C:\\Program Files\\nodejs\\npx.cmd",
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--isolated",
+        "--browser",
+        "chrome",
+        "--viewport-size",
+        "1280,800"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -2,7 +2,7 @@ from datetime import date
 
 from django import forms
 
-from .models import Loan, Person
+from .models import CONTRACT_MAX_MB, Loan, Person
 from .validators import only_digits
 
 
@@ -149,3 +149,21 @@ class LoanEditForm(forms.ModelForm):
         elif return_date > date.today():
             raise forms.ValidationError("A devolução não pode estar no futuro.")
         return return_date
+
+
+class ContractForm(forms.Form):
+    """The signed contract: a PDF of at most CONTRACT_MAX_MB."""
+
+    contract = forms.FileField(
+        label="Contrato assinado (PDF)", widget=forms.FileInput(attrs={"accept": "application/pdf"})
+    )
+
+    def clean_contract(self):
+        upload = self.cleaned_data["contract"]
+        if upload.size > CONTRACT_MAX_MB * 1024 * 1024:
+            raise forms.ValidationError(f"O arquivo passa de {CONTRACT_MAX_MB} MB.")
+        header = upload.read(5)
+        upload.seek(0)
+        if not upload.name.lower().endswith(".pdf") or header != b"%PDF-":
+            raise forms.ValidationError("Envie o contrato em PDF.")
+        return upload

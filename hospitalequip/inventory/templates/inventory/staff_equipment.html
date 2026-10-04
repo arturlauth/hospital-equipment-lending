@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Equipamentos (equipe){% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold">Equipamentos <span class="text-base font-normal text-stone-500">· visão da equipe</span></h1>
+    <a href="{% url 'inventory:equipment_new' %}" class="rounded-full bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">Cadastrar</a>
+  </div>
+  {% include "inventory/includes/listing.html" with card_template="inventory/includes/staff_card.html" search_placeholder="Buscar por nome ou patrimônio" empty_text="Nenhum equipamento encontrado." %}
+{% endblock %}

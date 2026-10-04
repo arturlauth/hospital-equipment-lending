@@ -1,0 +1,51 @@
+{# Mercado Livre-style listing: search on top, filters in the left column, 4 cards per row, pages. #}
+{# Every filter is a GET parameter, so a filtered list is a shareable URL. #}
+<form method="get" id="listing" class="mt-4">
+  <label class="relative block">
+    <span class="sr-only">Buscar</span>
+    <span class="absolute inset-y-0 left-3 flex items-center text-stone-400">{% include "includes/icon.html" with name="search" %}</span>
+    <input type="search" name="q" value="{{ query }}" placeholder="{{ search_placeholder }}"
+           class="w-full rounded-full border border-stone-300 bg-white py-3 pr-4 pl-10 text-base focus:border-teal-600 focus:outline-none">
+  </label>
+  <div class="mt-5 grid gap-6 md:grid-cols-[14rem_1fr]">
+    <aside>
+      {# Closed on phones so the cards come first; opened on desktop by the script below. #}
+      <details id="listing-filters" class="rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+        <summary class="cursor-pointer font-bold md:hidden">Filtros</summary>
+        <div class="space-y-5 max-md:mt-3">
+          {% for group in filters %}
+            <fieldset>
+              <legend class="text-sm font-bold">{{ group.label }}</legend>
+              <div class="mt-1.5 space-y-1 text-sm">
+                <label class="flex min-h-9 items-center gap-2"><input type="radio" name="{{ group.param }}" value="" {% if not group.selected %}checked{% endif %} onchange="this.form.requestSubmit()" class="accent-teal-700">{% if group.param == "situacao" %}Todas, menos Baixado{% else %}Todos{% endif %}</label>
+                {% for value, label in group.options %}
+                  <label class="flex min-h-9 items-center gap-2"><input type="radio" name="{{ group.param }}" value="{{ value }}" {% if value == group.selected %}checked{% endif %} onchange="this.form.requestSubmit()" class="accent-teal-700">{{ label }}</label>
+                {% endfor %}
+              </div>
+            </fieldset>
+          {% endfor %}
+          {% if filtered %}<a href="?" class="block text-sm font-bold text-teal-700">Limpar filtros</a>{% endif %}
+          <noscript><button type="submit" class="rounded-full bg-teal-700 px-4 py-2 text-sm font-bold text-white">Filtrar</button></noscript>
+        </div>
+      </details>
+      <script>if (matchMedia("(min-width: 768px)").matches) document.getElementById("listing-filters").open = true;</script>
+    </aside>
+    <section>
+      <p class="mb-3 text-sm text-stone-600">{{ page.paginator.count }} equipamento{{ page.paginator.count|pluralize }}</p>
+      <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {% for item in equipment_list %}
+          <li>{% include card_template %}</li>
+        {% empty %}
+          <li class="col-span-full py-10 text-lg text-stone-600">{{ empty_text }}</li>
+        {% endfor %}
+      </ul>
+      {% if page.has_other_pages %}
+        <nav class="mt-6 flex items-center justify-center gap-3 text-sm font-bold" aria-label="Páginas">
+          {% if page.has_previous %}<a href="{% querystring pagina=page.previous_page_number %}" class="rounded-full px-4 py-2 ring-1 ring-stone-300 hover:ring-teal-600">Anterior</a>{% endif %}
+          <span class="text-stone-600">Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+          {% if page.has_next %}<a href="{% querystring pagina=page.next_page_number %}" class="rounded-full px-4 py-2 ring-1 ring-stone-300 hover:ring-teal-600">Próxima</a>{% endif %}
+        </nav>
+      {% endif %}
+    </section>
+  </div>
+</form>

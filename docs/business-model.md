@@ -10,7 +10,7 @@ What the lending service does, in business terms. How it is built lives in the c
 | Categoria | Kind of item (andador, cama…) | Its code prefixes the patrimônio |
 | Depósito | Where items are kept and picked up | |
 | Pessoa | Someone registered by the equipe; never logs in | Acts as Beneficiário (takes the item) or Solidário (vouches, contacted when late) |
-| Empréstimo | One item with one Beneficiário and one Solidário | Emprestado em, devolução prevista, devolvido em |
+| Empréstimo | One item with one Beneficiário and one Solidário | Emprestado em, devolução prevista, devolvido em, contrato assinado (may be pending) |
 | Equipe | Atendente and Gestor | Gestor also writes items off |
 
 ## Equipment situação
@@ -32,7 +32,11 @@ Loan and situação are independent: one says who has the item, the other whethe
    (→ em manutenção) or extraviado (→ extraviado).
 3. **Corrigir empréstimo** — any equipe member fixes dates or undoes a return, giving a reason;
    undo is impossible once the item went out again.
-4. **Mudar situação** — any equipe member, with date and reason. **Dar baixa** is Gestor only and
+4. **Cadastrar / editar equipamento** — any equipe member, with photos and specification rows.
+   The categoria is chosen once: it makes the patrimônio, so neither changes afterwards.
+5. **Anexar contrato** — any equipe member attaches the signed contract (PDF, up to 10 MB) to a
+   loan; sending a new one replaces the old. Until then the loan shows "contrato pendente".
+6. **Mudar situação** — any equipe member, with date and reason. **Dar baixa** is Gestor only and
    never while a loan is open; a lost item is returned as extraviado first.
 
 ## Rules
@@ -41,3 +45,6 @@ Loan and situação are independent: one says who has the item, the other whethe
 2. A loan is late when open and past its devolução prevista (due today is not late).
 3. Every loan action and every situação change is recorded: who, when, what changed, why.
    Only the Gestor reads these records.
+4. A signed contract is read only by the equipe; it never has a public address.
+5. The public sees the catalog; the equipe has its own equipment view with every item, where
+   baixado items appear only when asked for.

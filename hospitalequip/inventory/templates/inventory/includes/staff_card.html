@@ -1,0 +1,15 @@
+<div class="flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-2">
+  <a href="{% url 'inventory:equipment' item.pk %}" class="group block">
+    {% with cover=item.images.all.0 %}
+      {% if cover %}<img src="{{ cover.image.url }}" alt="" loading="lazy" width="400" height="300" class="aspect-[4/3] w-full rounded-xl bg-stone-100 object-cover">
+      {% else %}<span class="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-stone-100 text-sm text-stone-500">Sem foto</span>{% endif %}
+    {% endwith %}
+    <p class="mt-2 line-clamp-2 px-1 font-bold leading-snug group-hover:text-teal-700">{{ item.name }}</p>
+    <p class="px-1 text-sm text-stone-500">{{ item.tag }} · {{ item.warehouse.name }}</p>
+  </a>
+  <p class="flex flex-wrap gap-1 px-1 pt-1.5 text-xs font-bold">
+    <span class="rounded-full px-2.5 py-1 {% if item.status == 'active' %}bg-emerald-50 text-emerald-800{% elif item.status == 'damaged' %}bg-amber-50 text-amber-800{% else %}bg-stone-100 text-stone-700{% endif %}">{{ item.get_status_display }}</span>
+    {% if item.open_loans %}<span class="rounded-full bg-sky-50 px-2.5 py-1 text-sky-800">Emprestado</span>{% endif %}
+  </p>
+  <a href="{% url 'inventory:equipment_edit' item.pk %}" class="mt-auto pt-2 text-center text-sm font-bold text-teal-700 hover:text-teal-800">Editar</a>
+</div>

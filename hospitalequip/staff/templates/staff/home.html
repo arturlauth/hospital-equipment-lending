@@ -4,10 +4,14 @@
 
 {% block content %}
   <h1 class="text-2xl font-bold">Olá, {{ user.get_short_name|default:user.username }}</h1>
-  <div class="mt-5 grid gap-3 sm:grid-cols-2">
-    <a href="{% url 'lending:people' %}" class="rounded-2xl bg-white p-5 ring-1 ring-stone-200 hover:ring-teal-300">
-      <p class="font-bold">Pessoas</p>
-      <p class="text-sm text-stone-600">Cadastrar e consultar comodatários e garantidores.</p>
-    </a>
-  </div>
+  <ul class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {% for item in staff_menu %}
+      <li>
+        <a href="{{ item.url }}" class="flex h-full gap-3 rounded-2xl bg-white p-5 ring-1 ring-stone-200 hover:ring-teal-300">
+          <span class="text-teal-700">{% include "includes/icon.html" with name=item.icon %}</span>
+          <span><span class="block font-bold">{{ item.label }}</span><span class="text-sm text-stone-600">{{ item.description }}</span></span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
 {% endblock %}
