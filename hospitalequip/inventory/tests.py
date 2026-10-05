@@ -59,18 +59,18 @@ def catalog(client):
     return {e.pk: e for e in client.get(reverse("inventory:catalog")).context["equipment_list"]}
 
 
-# Rule: the public sees only items that are not written off and have at least 3 photos.
+# Rule: the public sees only items that are not written off and have at least one photo.
 
 
 @pytest.mark.django_db
-def test_catalog_lists_an_active_item_with_three_photos_as_available(client, make_item):
-    item = make_item()
+def test_catalog_lists_an_active_item_with_one_photo_as_available(client, make_item):
+    item = make_item(images=1)
     assert catalog(client)[item.pk].is_available
 
 
 @pytest.mark.django_db
-def test_catalog_hides_an_item_with_fewer_than_three_photos(client, make_item):
-    item = make_item(images=2)
+def test_catalog_hides_an_item_without_photos(client, make_item):
+    item = make_item(images=0)
     assert item.pk not in catalog(client)
 
 
@@ -82,7 +82,7 @@ def test_catalog_hides_a_written_off_item(client, make_item):
 
 @pytest.mark.django_db
 def test_equipment_page_is_not_found_for_a_hidden_item(client, make_item):
-    item = make_item(images=2)
+    item = make_item(images=0)
     response = client.get(reverse("inventory:equipment", args=[item.pk]))
     assert response.status_code == 404
 
@@ -545,6 +545,6 @@ def test_catalog_pages_hold_24_items(client, make_item):
 @pytest.mark.django_db
 def test_catalog_category_filter_never_shows_hidden_items(client, make_item, walkers):
     shown = make_item()
-    make_item(images=2)
+    make_item(images=0)
     response = client.get(reverse("inventory:catalog"), {"categoria": walkers.pk})
     assert [e.pk for e in response.context["equipment_list"]] == [shown.pk]

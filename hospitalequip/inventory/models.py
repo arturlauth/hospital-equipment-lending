@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Count, Max, Q
 
-MIN_PUBLIC_IMAGES = 3
+MIN_PUBLIC_IMAGES = 1
 OPEN_LOAN = Q(loans__return_date__isnull=True)
 
 

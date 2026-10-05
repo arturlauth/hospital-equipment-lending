@@ -43,7 +43,8 @@ Lending system for hospital equipment. Monorepo, one product.
   QA writes screenshots/snapshots to `.playwright-mcp/` (gitignored); once QA has reported, Claude
   deletes that folder (`rm -rf .playwright-mcp`), since the QA agent has no delete tool.
 - **"Merged" alone means clean up, without asking:** `git switch main`, `git pull`, then delete the
-  merged branch locally (`git branch -d`) and on the remote (`git push origin --delete`).
+  merged branch locally (`git branch -d`) and `git fetch --prune` (GitHub already deletes the
+  remote branch on merge, so `git push origin --delete` only errors).
 
 ## Commands
 
@@ -52,7 +53,8 @@ are required; `.env.example` lists every variable (`config/test_env_example.py` 
 
 - DB: `docker compose up -d db` (Postgres 18 on 5432)
 - Migrate / run: `uv run python manage.py migrate`, `uv run python manage.py runserver`
-- Demo data: `uv run python manage.py loaddata demo_inventory demo_lending` (inventory first)
+- Demo data: `uv run python manage.py seed_demo` (empty DB only; covers every screen, dates relative
+  to today; photos/contracts land in `media/` and `private_media/`)
 - Tests: `uv run pytest`; one test: `uv run pytest hospitalequip/lending/tests.py::test_name`
   (needs the DB running — pytest-django creates a test database)
 - Lint / format: `uv run ruff check --fix`, `uv run ruff format` (ADR 0007; migrations excluded)
@@ -89,6 +91,8 @@ stated elsewhere in this file, in the code, or in git history does not get a row
 
 | Date | Trap / mistake | Correct approach |
 |---|---|---|
+| 2026-10-05 | `manage.py shell < script.py` silently skipped a multi-line loop (the interactive console needs a blank line after each block); only the echoed `print` line showed | Run scripts with `manage.py shell -c "exec(open(r'<abs path>', encoding='utf-8').read())"` |
+| 2026-10-04 | `manage.py flush` also deleted the Atendente/Gestor groups (created by a data migration), so `seed_demo` and every role lookup failed with `Group.DoesNotExist` | After a flush, recreate roles (`seed_demo` uses `get_or_create`) and the QA account from `.env`; your superuser must be recreated by hand |
 | 2026-10-04 | `Meta.ordering = ["name"]` vanished once `person_list` added `Count` annotations (Django drops Meta.ordering on aggregated queries); QA caught unsorted Pessoas | Add an explicit `.order_by(...)` to any annotated queryset; test the order with a row created last that sorts first |
 | 2026-10-04 | A `sed` mutation "proved" a test because the pattern no longer matched: `ruff format` had moved the trailing comment, so the fix was never removed | After mutating, `grep -c` the removed text (must be 0) before trusting a red/green result |
 | 2026-10-04 | QA reported a missing element that the code renders: two `runserver` processes were listening on :8000 and one was stale | Before QA, check `netstat -ano` for a single listener on :8000 |
